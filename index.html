@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <title>Laistymo Valdymas</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>🌿 Laistymo Sistema</h1>
+
+<section>
+    <h2>Drėgmės duomenys</h2>
+    <button onclick="loadSensors()">Atnaujinti</button>
+    <div id="sensorData">Nėra duomenų</div>
+</section>
+
+<section>
+    <h2>Laistymo valdymas</h2>
+    <button onclick="water(1, 10)">Zona 1 – 10s</button>
+    <button onclick="water(2, 10)">Zona 2 – 10s</button>
+</section>
+
+<section>
+    <h2>Laistymo istorija</h2>
+    <button onclick="loadHistory()">Rodyti istoriją</button>
+    <div id="history"></div>
+</section>
+
+<script src="script.js"></script>
+</body>
+</html>
