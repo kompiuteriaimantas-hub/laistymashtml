@@ -216,5 +216,5 @@ loadLatest();
 loadHistory();
 loadDataUsage();
 
-setInterval(loadLatest, 5000);
-setInterval(loadDataUsage, 5000);
+setInterval(loadLatest, 3600000);
+setInterval(loadDataUsage, 3600000);
