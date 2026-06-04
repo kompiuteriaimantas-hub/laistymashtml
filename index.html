@@ -2,46 +2,92 @@
 <html lang="lt">
 <head>
   <meta charset="UTF-8">
-  <title>Laistymo sistema</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laistymo panelė</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="container">
 
-  <h2>Laistymo sistemos būsena</h2>
+    <h1 class="title">Laistymo sistema</h1>
 
-  <div class="status">
-    Sistema: <span id="systemStatus">OK</span>
+    <div class="top-cards">
+      <div class="card">
+        <h3>Drėgmė</h3>
+        <div id="moisture-value" class="big">--%</div>
+      </div>
+
+      <div class="card">
+        <h3>Temperatūra</h3>
+        <div id="temp-value" class="big">--°C</div>
+      </div>
+
+      <div class="card">
+        <h3>Slėgis</h3>
+        <div id="pressure-value" class="big">---- hPa</div>
+      </div>
+
+      <div class="card">
+        <h3>Sistema</h3>
+        <div id="system-status" class="big status-ok">OK</div>
+        <div id="wifi-rssi" class="small">WiFi: -- dBm</div>
+        <div id="last-update" class="small">Atnaujinta: --</div>
+        <div id="data-usage" class="small">Web duomenys: 0.00 MB</div>
+
+        <div class="mode-row">
+          <span class="mode-label">Režimas:</span>
+          <button id="mode-unlimited" class="mode-btn active">Neribotas</button>
+          <button id="mode-saving" class="mode-btn">Taupus</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-card">
+        <h3>Drėgmė per 7 dienas</h3>
+        <canvas id="moistureChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>Temperatūra per 7 dienas</h3>
+        <canvas id="tempChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>Slėgis per 7 dienas</h3>
+        <canvas id="pressureChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Kalibravimas</h3>
+      <div class="calib-row">
+        <button id="calib-dry" class="btn-secondary">Kalibruoti SAUSA</button>
+        <button id="calib-wet" class="btn-primary">Kalibruoti ŠLAPIA</button>
+      </div>
+      <div class="calib-values">
+        <span>Dry: <span id="dry-value">--</span></span>
+        <span>Wet: <span id="wet-value">--</span></span>
+        <span>Raw: <span id="raw-value">--</span></span>
+        <span>Drėgmė: <span id="moisture-percent">--%</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Laistymas</h3>
+      <button id="pump-btn" class="btn-primary full-width">💧 Laistyti dabar</button>
+      <div id="pump-status" class="small">Siurblys: išjungtas</div>
+    </div>
+
+    <div class="card danger">
+      <h3>Sistemos būklė</h3>
+      <div id="lock-status" class="lock-text">Sistema: atrakinta</div>
+      <button id="unlock-btn" class="btn-danger full-width hidden">Atrakinti sistemą</button>
+    </div>
+
   </div>
 
-  <div id="sensorData"></div>
-
-  <script>
-    const API = "https://laistymassodas.onrender.com";
-
-    function loadData() {
-      fetch(`${API}/api/sensors`)
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById("systemStatus").innerText = "OK";
-
-          if (!data || data.length === 0) return;
-
-          const last = data[0];
-          document.getElementById("sensorData").innerHTML = `
-            <p>Zona: ${last.zone}</p>
-            <p>Drėgmė: ${last.moisture}%</p>
-            <p>Temperatūra: ${last.temperature}°C</p>
-            <p>Slėgis: ${last.pressure} hPa</p>
-            <p>WiFi: ${last.wifi}</p>
-          `;
-        })
-        .catch(err => {
-          document.getElementById("systemStatus").innerText = "OFFLINE";
-        });
-    }
-
-    loadData();
-    setInterval(loadData, 5000);
-  </script>
-
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
