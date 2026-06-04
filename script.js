@@ -53,7 +53,6 @@ async function loadLatest() {
     const wifiRssiEl = document.getElementById("wifi-rssi");
     const wifiPctEl = document.getElementById("wifi-percent");
 
-    // PATAISYTA SĄLYGA
     if (last.wifi === null || last.wifi === undefined) {
       wifiIconEl.innerText = "✖";
       wifiIconEl.style.color = "#777";
@@ -82,6 +81,29 @@ async function loadLatest() {
     console.error("Klaida:", err);
     document.getElementById("system-status").innerText = "KLAIDA";
     document.getElementById("system-status").classList.remove("status-ok");
+  }
+}
+
+// ---- DUOMENŲ NAUDOJIMO SKAIČIAVIMAS ----
+async function loadDataUsage() {
+  try {
+    const res = await fetch(`${API}/api/sensors`);
+    const data = await res.json();
+    if (!data.length) return;
+
+    let totalBytes = 0;
+
+    for (const row of data) {
+      if (row.bytes) totalBytes += row.bytes;
+    }
+
+    const mb = (totalBytes / 1024 / 1024).toFixed(2);
+
+    document.getElementById("data-usage").innerText =
+      "Web duomenys: " + mb + " MB";
+
+  } catch (err) {
+    console.error("Klaida skaičiuojant duomenis:", err);
   }
 }
 
@@ -176,4 +198,6 @@ document.getElementById("pump-btn").addEventListener("click", async () => {
 // ---- Startas ----
 loadLatest();
 loadHistory();
+loadDataUsage();          // <--- PRIDĖTA
 setInterval(loadLatest, 5000);
+setInterval(loadDataUsage, 5000);   // <--- PRIDĖTA
