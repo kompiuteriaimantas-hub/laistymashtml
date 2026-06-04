@@ -44,6 +44,24 @@ async function loadLatest() {
 
     const last = data[0];
 
+    // ---- ESP ONLINE/OFFLINE DETEKTORIUS ----
+    const lastTime = new Date(last.time).getTime();
+    const now = Date.now();
+    const diff = (now - lastTime) / 1000; // sekundėmis
+
+    if (diff > 10) {
+      document.getElementById("system-status").innerText = "OFFLINE";
+      document.getElementById("system-status").classList.remove("status-ok");
+      document.getElementById("system-status").classList.add("status-offline");
+      return;
+    }
+
+    // Jei ESP online — rodom OK
+    document.getElementById("system-status").innerText = "OK";
+    document.getElementById("system-status").classList.add("status-ok");
+    document.getElementById("system-status").classList.remove("status-offline");
+
+    // ---- Sensoriai ----
     document.getElementById("moisture-value").innerText = last.moisture + "%";
     document.getElementById("temp-value").innerText = last.temperature + "°C";
     document.getElementById("pressure-value").innerText = last.pressure + " hPa";
@@ -72,11 +90,9 @@ async function loadLatest() {
       wifiPctEl.style.color = color;
     }
 
-    document.getElementById("system-status").innerText = "OK";
-    document.getElementById("system-status").classList.add("status-ok");
-
     document.getElementById("last-update").innerText =
       "Atnaujinta: " + new Date().toLocaleTimeString();
+
   } catch (err) {
     console.error("Klaida:", err);
     document.getElementById("system-status").innerText = "KLAIDA";
@@ -198,6 +214,7 @@ document.getElementById("pump-btn").addEventListener("click", async () => {
 // ---- Startas ----
 loadLatest();
 loadHistory();
-loadDataUsage();          // <--- PRIDĖTA
+loadDataUsage();
+
 setInterval(loadLatest, 5000);
-setInterval(loadDataUsage, 5000);   // <--- PRIDĖTA
+setInterval(loadDataUsage, 5000);
