@@ -47,7 +47,7 @@ async function loadLatest() {
     // ---- ESP ONLINE/OFFLINE DETEKTORIUS ----
     const lastTime = new Date(last.time).getTime();
     const now = Date.now();
-    const diff = (now - lastTime) / 1000; // sekundėmis
+    const diff = (now - lastTime) / 1000;
 
     if (diff > 10) {
       document.getElementById("system-status").innerText = "OFFLINE";
@@ -56,17 +56,14 @@ async function loadLatest() {
       return;
     }
 
-    // Jei ESP online — rodom OK
     document.getElementById("system-status").innerText = "OK";
     document.getElementById("system-status").classList.add("status-ok");
     document.getElementById("system-status").classList.remove("status-offline");
 
-    // ---- Sensoriai ----
     document.getElementById("moisture-value").innerText = last.moisture + "%";
     document.getElementById("temp-value").innerText = last.temperature + "°C";
     document.getElementById("pressure-value").innerText = last.pressure + " hPa";
 
-    // ---- WiFi indikatorius ----
     const wifiIconEl = document.getElementById("wifi-icon");
     const wifiRssiEl = document.getElementById("wifi-rssi");
     const wifiPctEl = document.getElementById("wifi-percent");
@@ -123,6 +120,11 @@ async function loadDataUsage() {
   }
 }
 
+// ---- GRAFIKŲ KINTAMIEJI ----
+let moistChart = null;
+let tempChart = null;
+let pressChart = null;
+
 // ---- Grafikai ----
 async function loadHistory() {
   try {
@@ -145,7 +147,13 @@ async function loadHistory() {
     const temp = data.map((x) => x.temperature).reverse();
     const press = data.map((x) => x.pressure).reverse();
 
-    new Chart(document.getElementById("moistureChart"), {
+    // ---- SUNAIKINAM SENUS GRAFIKUS ----
+    if (moistChart) moistChart.destroy();
+    if (tempChart) tempChart.destroy();
+    if (pressChart) pressChart.destroy();
+
+    // ---- KURIAM NAUJUS ----
+    moistChart = new Chart(document.getElementById("moistureChart"), {
       type: "line",
       data: {
         labels,
@@ -160,7 +168,7 @@ async function loadHistory() {
       },
     });
 
-    new Chart(document.getElementById("tempChart"), {
+    tempChart = new Chart(document.getElementById("tempChart"), {
       type: "line",
       data: {
         labels,
@@ -175,7 +183,7 @@ async function loadHistory() {
       },
     });
 
-    new Chart(document.getElementById("pressureChart"), {
+    pressChart = new Chart(document.getElementById("pressureChart"), {
       type: "line",
       data: {
         labels,
@@ -189,6 +197,7 @@ async function loadHistory() {
         ],
       },
     });
+
   } catch (err) {
     console.error("Klaida istorijoje:", err);
   }
@@ -220,4 +229,4 @@ setInterval(loadLatest, 5000);
 setInterval(loadDataUsage, 5000);
 
 // ---- GRAFIKŲ ATNAUJINIMAS KAS 1 VALANDĄ ----
-setInterval(loadHistory, 3600000); // 1 valanda
+setInterval(loadHistory, 3600000);
