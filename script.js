@@ -218,3 +218,6 @@ loadDataUsage();
 
 setInterval(loadLatest, 5000);
 setInterval(loadDataUsage, 5000);
+
+// ---- GRAFIKŲ ATNAUJINIMAS KAS 1 VALANDĄ ----
+setInterval(loadHistory, 3600000); // 1 valanda
