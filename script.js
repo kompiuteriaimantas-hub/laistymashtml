@@ -1,5 +1,40 @@
 const API = "https://laistymassodas.onrender.com";
 
+// ---- WiFi padalų logika ----
+function wifiBars(rssi) {
+  if (rssi >= -50) return 4;
+  if (rssi >= -60) return 3;
+  if (rssi >= -70) return 2;
+  if (rssi >= -80) return 1;
+  return 0;
+}
+
+function wifiIcon(bars) {
+  const symbols = ["▁", "▂", "▃", "▅", "█"];
+  return symbols[bars];
+}
+
+// ---- WiFi procentai ----
+function wifiPercent(rssi) {
+  if (rssi === null || rssi === undefined) return 0;
+
+  let pct = Math.round(((rssi + 90) / 60) * 100);
+  if (pct < 0) pct = 0;
+  if (pct > 100) pct = 100;
+  return pct;
+}
+
+// ---- WiFi spalvos ----
+function wifiColor(rssi) {
+  if (rssi === null || rssi === undefined) return "#777";
+
+  if (rssi >= -50) return "#00e676";
+  if (rssi >= -60) return "#69f0ae";
+  if (rssi >= -70) return "#ffeb3b";
+  if (rssi >= -80) return "#ff9800";
+  return "#f44336";
+}
+
 // ---- Naujausių duomenų užkrovimas ----
 async function loadLatest() {
   try {
@@ -9,12 +44,34 @@ async function loadLatest() {
 
     const last = data[0];
 
-    document.getElementById("moisture-value").innerText =
-      last.moisture + "%";
-    document.getElementById("temp-value").innerText =
-      last.temperature + "°C";
-    document.getElementById("pressure-value").innerText =
-      last.pressure + " hPa";
+    document.getElementById("moisture-value").innerText = last.moisture + "%";
+    document.getElementById("temp-value").innerText = last.temperature + "°C";
+    document.getElementById("pressure-value").innerText = last.pressure + " hPa";
+
+    // ---- WiFi indikatorius ----
+    const wifiIconEl = document.getElementById("wifi-icon");
+    const wifiRssiEl = document.getElementById("wifi-rssi");
+    const wifiPctEl = document.getElementById("wifi-percent");
+
+    // PATAISYTA SĄLYGA
+    if (last.wifi === null || last.wifi === undefined) {
+      wifiIconEl.innerText = "✖";
+      wifiIconEl.style.color = "#777";
+      wifiRssiEl.innerText = "WiFi: nėra";
+      wifiPctEl.innerText = "0%";
+      wifiPctEl.style.color = "#777";
+    } else {
+      const bars = wifiBars(last.wifi);
+      const pct = wifiPercent(last.wifi);
+      const color = wifiColor(last.wifi);
+
+      wifiIconEl.innerText = wifiIcon(bars);
+      wifiIconEl.style.color = color;
+
+      wifiRssiEl.innerText = "WiFi: " + last.wifi + " dBm";
+      wifiPctEl.innerText = pct + "%";
+      wifiPctEl.style.color = color;
+    }
 
     document.getElementById("system-status").innerText = "OK";
     document.getElementById("system-status").classList.add("status-ok");
@@ -28,27 +85,20 @@ async function loadLatest() {
   }
 }
 
-// ---- Grafikai (paskutiniai įrašai) ----
+// ---- Grafikai ----
 async function loadHistory() {
   try {
     const res = await fetch(`${API}/api/sensors`);
     const data = await res.json();
     if (!data.length) return;
 
-    // --- Laiko formatavimas: MM-DD HH:MM ---
     const labels = data
       .map((x) => {
         const d = new Date(x.time);
         return (
-          d.toLocaleDateString("lt-LT", {
-            month: "2-digit",
-            day: "2-digit",
-          }) +
+          d.toLocaleDateString("lt-LT", { month: "2-digit", day: "2-digit" }) +
           " " +
-          d.toLocaleTimeString("lt-LT", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
+          d.toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })
         );
       })
       .reverse();
