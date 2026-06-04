@@ -1,88 +1,47 @@
 <!DOCTYPE html>
 <html lang="lt">
 <head>
-<meta charset="UTF-8">
-<title>Laistymo sistema</title>
-
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f5f5f5;
-  padding: 20px;
-}
-
-.status {
-  font-size: 20px;
-  margin-bottom: 15px;
-}
-
-#systemStatus.ok {
-  color: #00c853; /* žalia */
-  font-weight: bold;
-}
-
-#systemStatus.offline {
-  color: #d50000; /* raudona */
-  font-weight: bold;
-}
-
-#systemStatus.nodata {
-  color: #ffab00; /* geltona */
-  font-weight: bold;
-}
-</style>
-
+  <meta charset="UTF-8">
+  <title>Laistymo sistema</title>
 </head>
 <body>
 
-<h2>Laistymo sistemos būsena</h2>
+  <h2>Laistymo sistemos būsena</h2>
 
-<div class="status">
-  Sistema: <span id="systemStatus" class="offline">OFFLINE</span>
-</div>
+  <div class="status">
+    Sistema: <span id="systemStatus">OK</span>
+  </div>
 
-<div id="sensorData"></div>
+  <div id="sensorData"></div>
 
-<script>
-const API = "https://laistymassodas.onrender.com";
+  <script>
+    const API = "https://laistymassodas.onrender.com";
 
-// ---- STATUSO SPALVOS ----
-function setStatus(text, cls) {
-  const el = document.getElementById("systemStatus");
-  el.innerText = text;
-  el.className = cls;
-}
+    function loadData() {
+      fetch(`${API}/api/sensors`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("systemStatus").innerText = "OK";
 
-// ---- DUOMENŲ KROVIMAS ----
-function loadData() {
-  fetch(`${API}/api/sensors`)
-    .then(res => res.json())
-    .then(data => {
-      if (!data || data.length === 0) {
-        setStatus("NO DATA", "nodata");
-        return;
-      }
+          if (!data || data.length === 0) return;
 
-      setStatus("OK", "ok");
+          const last = data[0];
+          document.getElementById("sensorData").innerHTML = `
+            <p>Zona: ${last.zone}</p>
+            <p>Drėgmė: ${last.moisture}%</p>
+            <p>Temperatūra: ${last.temperature}°C</p>
+            <p>Slėgis: ${last.pressure} hPa</p>
+            <p>WiFi: ${last.wifi}</p>
+          `;
+        })
+        .catch(err => {
+          document.getElementById("systemStatus").innerText = "OFFLINE";
+        });
+    }
 
-      const last = data[0];
-      document.getElementById("sensorData").innerHTML = `
-        <p>Zona: ${last.zone}</p>
-        <p>Drėgmė: ${last.moisture}%</p>
-        <p>Temperatūra: ${last.temperature}°C</p>
-        <p>Slėgis: ${last.pressure} hPa</p>
-        <p>WiFi: ${last.wifi}</p>
-      `;
-    })
-    .catch(err => {
-      setStatus("OFFLINE", "offline");
-    });
-}
-
-// kraunam kas 5 sekundes
-loadData();
-setInterval(loadData, 5000);
-</script>
+    loadData();
+    setInterval(loadData, 5000);
+  </script>
 
 </body>
 </html>
