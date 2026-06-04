@@ -28,16 +28,31 @@ async function loadLatest() {
   }
 }
 
-// ---- Grafikai (paprasta versija iš paskutinių įrašų) ----
+// ---- Grafikai (paskutiniai įrašai) ----
 async function loadHistory() {
   try {
     const res = await fetch(`${API}/api/sensors`);
     const data = await res.json();
     if (!data.length) return;
 
+    // --- Laiko formatavimas: MM-DD HH:MM ---
     const labels = data
-      .map((x) => x.time || "")
+      .map((x) => {
+        const d = new Date(x.time);
+        return (
+          d.toLocaleDateString("lt-LT", {
+            month: "2-digit",
+            day: "2-digit",
+          }) +
+          " " +
+          d.toLocaleTimeString("lt-LT", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        );
+      })
       .reverse();
+
     const moist = data.map((x) => x.moisture).reverse();
     const temp = data.map((x) => x.temperature).reverse();
     const press = data.map((x) => x.pressure).reverse();
