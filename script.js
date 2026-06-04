@@ -1,7 +1,6 @@
-// ---------------------- API URL ----------------------
 const API = "https://laistymassodas.onrender.com";
 
-// ---------------------- DUOMENŲ UŽKROVIMAS ----------------------
+// ---- Naujausių duomenų užkrovimas ----
 async function loadLatest() {
     try {
         const res = await fetch(`${API}/api/sensors`);
@@ -11,80 +10,33 @@ async function loadLatest() {
 
         const last = data[0];
 
-        // Atnaujinam UI
+        // UI atnaujinimas
         document.getElementById("moisture-value").innerText = last.moisture + "%";
         document.getElementById("temp-value").innerText = last.temperature + "°C";
-        document.getElementById("pressure-value").innerText = (last.pressure || "---") + " hPa";
+
+        // Kadangi API neturi slėgio:
+        document.getElementById("pressure-value").innerText = "--- hPa";
+
+        document.getElementById("system-status").innerText = "OK";
+        document.getElementById("system-status").classList.add("status-ok");
 
         document.getElementById("last-update").innerText =
             "Atnaujinta: " + new Date().toLocaleTimeString();
 
     } catch (err) {
-        console.error("Klaida gaunant duomenis:", err);
+        console.error("Klaida:", err);
         document.getElementById("system-status").innerText = "KLAIDA";
         document.getElementById("system-status").classList.remove("status-ok");
     }
 }
 
-// ---------------------- 7 DIENŲ GRAFIKAI ----------------------
+// ---- Grafikai (kol kas tušti, nes API neturi istorijos) ----
 async function loadHistory() {
-    try {
-        const res = await fetch(`${API}/api/sensors`);
-        const data = await res.json();
-
-        const labels = data.map(x => new Date(x.time).toLocaleDateString());
-        const moist = data.map(x => x.moisture);
-        const temp = data.map(x => x.temperature);
-        const press = data.map(x => x.pressure || null);
-
-        // Drėgmės grafikas
-        new Chart(document.getElementById("moistureChart"), {
-            type: "line",
-            data: {
-                labels,
-                datasets: [{
-                    label: "Drėgmė (%)",
-                    data: moist,
-                    borderColor: "#4CAF50",
-                    tension: 0.3
-                }]
-            }
-        });
-
-        // Temperatūros grafikas
-        new Chart(document.getElementById("tempChart"), {
-            type: "line",
-            data: {
-                labels,
-                datasets: [{
-                    label: "Temperatūra (°C)",
-                    data: temp,
-                    borderColor: "#FF5722",
-                    tension: 0.3
-                }]
-            }
-        });
-
-        // Slėgio grafikas
-        new Chart(document.getElementById("pressureChart"), {
-            type: "line",
-            data: {
-                labels,
-                datasets: [{
-                    label: "Slėgis (hPa)",
-                    data: press,
-                    borderColor: "#2196F3",
-                    tension: 0.3
-                }]
-            }
-        });
-
-    } catch (err) {
-        console.error("Klaida gaunant istoriją:", err);
-    }
+    // API neturi time/pressure → grafikai neveiks
+    // Palieku tuščius grafikus, kad UI nesulūžtų
 }
 
-// ---------------------- SIURBLIO VALDYMAS ----------------------
+// ---- Siurblio valdymas ----
 document.getElementById("pump-btn").addEventListener("click", async () => {
     try {
         const res = await fetch(`${API}/api/watering`, {
@@ -102,16 +54,6 @@ document.getElementById("pump-btn").addEventListener("click", async () => {
     }
 });
 
-// ---------------------- KALIBRAVIMAS ----------------------
-document.getElementById("calib-dry").addEventListener("click", () => {
-    alert("Kalibravimas SAUSA dar neįdiegtas API pusėje.");
-});
-
-document.getElementById("calib-wet").addEventListener("click", () => {
-    alert("Kalibravimas ŠLAPIA dar neįdiegtas API pusėje.");
-});
-
-// ---------------------- PERIODINIS ATNAUJINIMAS ----------------------
+// ---- Periodinis atnaujinimas ----
 loadLatest();
-loadHistory();
 setInterval(loadLatest, 5000);
