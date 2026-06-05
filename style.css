@@ -39,6 +39,17 @@ body {
     display: block;
 }
 
+.reset-btn {
+    margin-top: 4px;
+    padding: 4px 10px;
+    font-size: 12px;
+    background: #d32f2f;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
 main {
     padding: 12px;
     max-width: 900px;

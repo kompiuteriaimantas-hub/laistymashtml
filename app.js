@@ -17,7 +17,7 @@ async function fetchStatus() {
 
         const res = await fetch(
             `${SUPABASE_URL}/rest/v1/status?select=moisture_percent,temperature_c,pressure_hpa,wifi_rssi,relay,lockdown,usage_bytes&order=id.desc&limit=1`,
-            { 
+            {
                 headers: sbHeaders(),
                 signal: controller.signal
             }
@@ -51,39 +51,6 @@ async function fetchStatus() {
         document.getElementById("onlineStatus").innerText = "ONLINE";
         document.getElementById("onlineStatus").style.color = "#00ff00";
 
-    } catch (e) {
-        document.getElementById("onlineStatus").innerText = "OFFLINE";
-        document.getElementById("onlineStatus").style.color = "#ffcc33";
-    }
-}
-
-// atsinaujina kas 5 sek
-setInterval(fetchStatus, 5000);
-fetchStatus();
-
-
-        const arr = await res.json();
-        const data = arr[0] || {};
-
-        document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
-        document.getElementById("temperature").innerText = data.temperature_c ?? "-";
-        document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
-        document.getElementById("wifi").innerText = data.wifi_rssi ?? "-";
-
-        document.getElementById("relayState").innerText = data.relay ? "Įjungta" : "Išjungta";
-        document.getElementById("lockdownState").innerText = data.lockdown ? "TAIP" : "NE";
-
-        const statusEl = document.getElementById("onlineStatus");
-        const online = !!data.moisture_percent;
-        statusEl.innerText = online ? "ONLINE" : "OFFLINE";
-        statusEl.style.color = online ? "#00ff00" : "#ffcc33";
-
-        const usageBytes = data.usage_bytes || 0;
-        const kb = usageBytes / 1024;
-        const mb = kb / 1024;
-        document.getElementById("usage").innerText =
-            mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
-
         const btn = document.getElementById("relayBtn");
         if (data.relay) {
             btn.innerText = "Išjungti";
@@ -92,24 +59,19 @@ fetchStatus();
             btn.innerText = "Įjungti";
             btn.classList.remove("off");
         }
+
     } catch (e) {
-        console.error("fetchStatus error", e);
+        document.getElementById("onlineStatus").innerText = "OFFLINE";
+        document.getElementById("onlineStatus").style.color = "#ffcc33";
     }
 }
 
 async function sendRelayCommand(state) {
-    try {
-        await fetch(
-            `${SUPABASE_URL}/rest/v1/commands`,
-            {
-                method: "POST",
-                headers: sbHeaders({ Prefer: "return=minimal" }),
-                body: JSON.stringify({ relay_state: state })
-            }
-        );
-    } catch (e) {
-        console.error("sendRelayCommand error", e);
-    }
+    await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
+        method: "POST",
+        headers: sbHeaders({ Prefer: "return=minimal" }),
+        body: JSON.stringify({ relay_state: state })
+    });
 }
 
 async function calibrateDry() {
@@ -136,6 +98,16 @@ async function resetLockdown() {
     });
 }
 
+async function resetUsage() {
+    await fetch(`${SUPABASE_URL}/rest/v1/status`, {
+        method: "PATCH",
+        headers: sbHeaders({ Prefer: "return=minimal" }),
+        body: JSON.stringify({ usage_bytes: 0 })
+    });
+
+    document.getElementById("usage").innerText = "0 KB";
+}
+
 window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("relayBtn").addEventListener("click", async () => {
         const isOn = document.getElementById("relayBtn").classList.contains("off");
@@ -146,6 +118,7 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnDry").addEventListener("click", calibrateDry);
     document.getElementById("btnWet").addEventListener("click", calibrateWet);
     document.getElementById("btnReset").addEventListener("click", resetLockdown);
+    document.getElementById("resetUsage").addEventListener("click", resetUsage);
 
     fetchStatus();
     setInterval(fetchStatus, 5000);
