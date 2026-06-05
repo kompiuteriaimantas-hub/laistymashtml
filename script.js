@@ -32,7 +32,7 @@ function wifiColor(rssi) {
 // ---- Naujausių duomenų užkrovimas ----
 async function loadLatest() {
   try {
-    const res = await fetch(`${API}/api/sensors`);
+    const res = await fetch(`${API}/api/sensors/all`);
     const data = await res.json();
     if (!data.length) return;
 
@@ -44,10 +44,9 @@ async function loadLatest() {
       x.pressure !== null
     );
 
-    if (!fullList.length) return;
+    const lastFull = fullList.length ? fullList[0] : null;
 
-    const lastFull = fullList[0];
-
+    // ONLINE / OFFLINE
     const lastTime = new Date(lastAny.time).getTime();
     const diff = (Date.now() - lastTime) / 1000;
 
@@ -63,24 +62,14 @@ async function loadLatest() {
     statusEl.classList.add("status-ok");
     statusEl.classList.remove("status-offline");
 
-    document.getElementById("moisture-value").innerText = lastFull.moisture + "%";
-    document.getElementById("temp-value").innerText = lastFull.temperature + "°C";
-    document.getElementById("pressure-value").innerText = lastFull.pressure + " hPa";
-    document.getElementById("reset-data-btn").addEventListener("click", async () => {
-    if (!confirm("Tikrai ištrinti visus duomenis?")) return;
+    // Sensoriai (jei turime pilną įrašą)
+    if (lastFull) {
+      document.getElementById("moisture-value").innerText = lastFull.moisture + "%";
+      document.getElementById("temp-value").innerText = lastFull.temperature + "°C";
+      document.getElementById("pressure-value").innerText = lastFull.pressure + " hPa";
+    }
 
-  const res = await fetch(`${API}/api/sensors/reset`, {
-    method: "DELETE"
-  });
-
-  const data = await res.json();
-  console.log("Reset:", data);
-
-  // Po reset – iškart atnaujinam rodymą
-  document.getElementById("data-usage").innerText = "Web duomenys: 0 KB";
-});
-
-
+    // WiFi
     const wifiIconEl = document.getElementById("wifi-icon");
     const wifiRssiEl = document.getElementById("wifi-rssi");
     const wifiPctEl = document.getElementById("wifi-percent");
@@ -119,27 +108,32 @@ async function loadDataUsage() {
       }
     }
 
-    // Automatinis KB → MB perjungimas
-    let displayText = "";
     const kb = totalBytes / 1024;
     const mb = kb / 1024;
 
-    if (mb >= 1) {
-      displayText = mb.toFixed(2) + " MB";
-    } else {
-      displayText = kb.toFixed(1) + " KB";
-    }
+    let display = mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
 
     document.getElementById("data-usage").innerText =
-      "Web duomenys: " + displayText;
+      "Web duomenys: " + display;
 
   } catch (err) {
     console.error("Klaida skaičiuojant duomenis:", err);
   }
 }
 
+// ---- RESET MYGTUKAS ----
+document.getElementById("reset-data-btn").addEventListener("click", async () => {
+  if (!confirm("Tikrai ištrinti visus duomenis?")) return;
 
+  const res = await fetch(`${API}/api/sensors/reset`, {
+    method: "DELETE"
+  });
 
+  const data = await res.json();
+  console.log("Reset:", data);
+
+  document.getElementById("data-usage").innerText = "Web duomenys: 0 KB";
+});
 
 // ---- GRAFIKAI ----
 let moistChart = null;
@@ -148,7 +142,7 @@ let pressChart = null;
 
 async function loadHistory() {
   try {
-    const res = await fetch(`${API}/api/sensors`);
+    const res = await fetch(`${API}/api/sensors/all`);
     const data = await res.json();
     if (!data.length) return;
 
@@ -194,7 +188,7 @@ async function loadHistory() {
   }
 }
 
-// ---- RELES MYGTUKAS (sutvarkyta logika) ----
+// ---- RELES MYGTUKAS ----
 document.getElementById("pump-btn").addEventListener("click", async () => {
   const btn = document.getElementById("pump-btn");
   const isOn = btn.classList.contains("active");
@@ -209,7 +203,6 @@ document.getElementById("pump-btn").addEventListener("click", async () => {
   const data = await res.json();
   console.log("Komanda išsiųsta:", data);
 
-  // 🔥 BŪTINA – perjungia mygtuko būseną
   btn.classList.toggle("active");
 });
 
