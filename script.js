@@ -93,29 +93,37 @@ async function loadLatest() {
 // ---- DUOMENŲ NAUDOJIMO SKAIČIAVIMAS ----
 async function loadDataUsage() {
   try {
-    const res = await fetch(`${API}/api/sensors`);
+    const res = await fetch(`${API}/api/sensors/all`);
     const data = await res.json();
     if (!data.length) return;
 
     let totalBytes = 0;
 
-    // Skaičiuojame bytes iš VISŲ įrašų (heartbeat + pilni sensoriai)
     for (const row of data) {
       if (row.bytes !== null && row.bytes !== undefined) {
         totalBytes += row.bytes;
       }
     }
 
-    // Konvertuojame į MB
-    const mb = (totalBytes / 1024 / 1024).toFixed(2);
+    // Automatinis KB → MB perjungimas
+    let displayText = "";
+    const kb = totalBytes / 1024;
+    const mb = kb / 1024;
+
+    if (mb >= 1) {
+      displayText = mb.toFixed(2) + " MB";
+    } else {
+      displayText = kb.toFixed(1) + " KB";
+    }
 
     document.getElementById("data-usage").innerText =
-      "Web duomenys: " + mb + " MB";
+      "Web duomenys: " + displayText;
 
   } catch (err) {
     console.error("Klaida skaičiuojant duomenis:", err);
   }
 }
+
 
 
 
