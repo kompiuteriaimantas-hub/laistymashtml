@@ -1,57 +1,87 @@
+// Pakeisk į savo Deta Micro URL
 const MICRO_URL = "https://tavo-micro.deta.dev";
 
+let moistureChart, tempChart, pressureChart;
+
 async function fetchStatus() {
-    const res = await fetch(MICRO_URL + "/ui/status");
-    const data = await res.json();
+    try {
+        const res = await fetch(MICRO_URL + "/ui/status");
+        const data = await res.json();
 
-    document.getElementById("moisture").innerText = data.moisturePercent;
-    document.getElementById("temperature").innerText = data.temperatureC;
-    document.getElementById("pressure").innerText = data.pressureHPa;
-    document.getElementById("wifi").innerText = data.wifiRssi;
-    document.getElementById("relayState").innerText = data.relay ? "Įjungta" : "Išjungta";
-    document.getElementById("lockdownState").innerText = data.lockdown ? "TAIP" : "NE";
+        // Pagrindiniai rodmenys
+        document.getElementById("moistureValue").innerText =
+            data.moisturePercent != null ? data.moisturePercent.toFixed(1) : "-";
+        document.getElementById("tempValue").innerText =
+            data.temperatureC != null ? data.temperatureC.toFixed(1) : "-";
+        document.getElementById("pressureValue").innerText =
+            data.pressureHPa != null ? data.pressureHPa.toFixed(1) : "-";
 
-    // Online/offline
-    document.getElementById("onlineStatus").innerText =
-        data.online ? "ONLINE" : "OFFLINE";
+        document.getElementById("wifiRssi").innerText =
+            data.wifiRssi != null ? data.wifiRssi : "-";
 
-    // Duomenų naudojimas
-    let kb = data.usageBytes / 1024;
-    let mb = kb / 1024;
-    document.getElementById("usage").innerText =
-        mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
+        // Online / offline
+        const dot = document.getElementById("onlineDot");
+        const text = document.getElementById("onlineText");
+        if (data.online) {
+            dot.style.background = "#4caf50";
+            text.innerText = "ONLINE";
+        } else {
+            dot.style.background = "#e53935";
+            text.innerText = "OFFLINE";
+        }
+
+        // Relė
+        const relayState = data.relay ? "Įjungta" : "Išjungta";
+        document.getElementById("relayState").innerText = relayState;
+        const relayBtn = document.getElementById("relayToggleBtn");
+        if (data.relay) {
+            relayBtn.textContent = "Išjungti";
+            relayBtn.classList.add("off");
+        } else {
+            relayBtn.textContent = "Įjungti";
+            relayBtn.classList.remove("off");
+        }
+
+        // Lockdown
+        document.getElementById("lockdownState").innerText =
+            data.lockdown ? "AKTYVUS" : "NE";
+
+        // Duomenų naudojimas
+        let kb = data.usageBytes / 1024;
+        let mb = kb / 1024;
+        document.getElementById("usageText").innerText =
+            mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
+
+    } catch (e) {
+        console.error(e);
+    }
 }
 
 async function fetchHistory() {
-    const res = await fetch(MICRO_URL + "/ui/history");
-    const items = await res.json();
+    try {
+        const res = await fetch(MICRO_URL + "/ui/history");
+        const items = await res.json();
 
-    let times = items.map(i => i.time);
-    let moist = items.map(i => i.moisturePercent);
-    let temp = items.map(i => i.temperatureC);
-    let press = items.map(i => i.pressureHPa);
+        const labels = items.map(i => i.time);
+        const moist = items.map(i => i.moisturePercent);
+        const temp = items.map(i => i.temperatureC);
+        const press = items.map(i => i.pressureHPa);
 
-    drawChart("chartMoisture", "Drėgmė %", moist, times);
-    drawChart("chartTemp", "Temperatūra °C", temp, times);
-    drawChart("chartPressure", "Slėgis hPa", press, times);
+        updateChart(moistureChart, labels, moist);
+        updateChart(tempChart, labels, temp);
+        updateChart(pressureChart, labels, press);
+    } catch (e) {
+        console.error(e);
+    }
 }
 
-function drawChart(id, label, data, labels) {
-    new Chart(document.getElementById(id), {
-        type: "line",
-        data: {
-            labels: labels,
-            datasets: [{
-                label: label,
-                data: data,
-                borderColor: "green",
-                fill: false
-            }]
-        }
-    });
+function updateChart(chart, labels, data) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = data;
+    chart.update();
 }
 
-// ------------------ KOMANDOS ------------------
+// Komandos
 
 async function relayOn() {
     await fetch(MICRO_URL + "/ui/relay", {
@@ -89,10 +119,73 @@ async function resetLockdown() {
     await fetch(MICRO_URL + "/ui/reset", {method: "POST"});
 }
 
-// ------------------ AUTO UPDATE ------------------
+// Relay toggle mygtukas
 
-setInterval(fetchStatus, 3000);
-setInterval(fetchHistory, 15000);
+document.addEventListener("DOMContentLoaded", () => {
+    const relayBtn = document.getElementById("relayToggleBtn");
+    relayBtn.addEventListener("click", async () => {
+        if (relayBtn.classList.contains("off")) {
+            await relayOff();
+        } else {
+            await relayOn();
+        }
+    });
 
-fetchStatus();
-fetchHistory();
+    // Inicijuojam grafikus
+    const ctxM = document.getElementById("moistureChart").getContext("2d");
+    const ctxT = document.getElementById("tempChart").getContext("2d");
+    const ctxP = document.getElementById("pressureChart").getContext("2d");
+
+    moistureChart = new Chart(ctxM, {
+        type: "line",
+        data: {
+            labels: [],
+            datasets: [{
+                label: "Drėgmė %",
+                data: [],
+                borderColor: "#43a047",
+                backgroundColor: "rgba(67,160,71,0.1)",
+                tension: 0.25
+            }]
+        },
+        options: {responsive: true, scales: {x: {display: false}}}
+    });
+
+    tempChart = new Chart(ctxT, {
+        type: "line",
+        data: {
+            labels: [],
+            datasets: [{
+                label: "Temperatūra °C",
+                data: [],
+                borderColor: "#fb8c00",
+                backgroundColor: "rgba(251,140,0,0.1)",
+                tension: 0.25
+            }]
+        },
+        options: {responsive: true, scales: {x: {display: false}}}
+    });
+
+    pressureChart = new Chart(ctxP, {
+        type: "line",
+        data: {
+            labels: [],
+            datasets: [{
+                label: "Slėgis hPa",
+                data: [],
+                borderColor: "#1e88e5",
+                backgroundColor: "rgba(30,136,229,0.1)",
+                tension: 0.25
+            }]
+        },
+        options: {responsive: true, scales: {x: {display: false}}}
+    });
+
+    // Pirmas užkrovimas
+    fetchStatus();
+    fetchHistory();
+
+    // Periodinis atnaujinimas
+    setInterval(fetchStatus, 3000);
+    setInterval(fetchHistory, 15000);
+});
