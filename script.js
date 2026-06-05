@@ -36,24 +36,18 @@ async function loadLatest() {
     const data = await res.json();
     if (!data.length) return;
 
-    // 1. Paskutinis įrašas (heartbeat OK)
     const lastAny = data[0];
 
-    // 2. Paskutinis pilnas sensorių įrašas (NE heartbeat)
     const fullList = data.filter(x =>
       x.moisture !== null &&
       x.temperature !== null &&
       x.pressure !== null
     );
 
-    if (!fullList.length) {
-      console.warn("Nėra pilnų sensorių įrašų");
-      return;
-    }
+    if (!fullList.length) return;
 
     const lastFull = fullList[0];
 
-    // ---- ONLINE/OFFLINE pagal paskutinį įrašą (heartbeat OK) ----
     const lastTime = new Date(lastAny.time).getTime();
     const diff = (Date.now() - lastTime) / 1000;
 
@@ -69,12 +63,10 @@ async function loadLatest() {
     statusEl.classList.add("status-ok");
     statusEl.classList.remove("status-offline");
 
-    // ---- Sensoriai iš paskutinio pilno įrašo ----
     document.getElementById("moisture-value").innerText = lastFull.moisture + "%";
     document.getElementById("temp-value").innerText = lastFull.temperature + "°C";
     document.getElementById("pressure-value").innerText = lastFull.pressure + " hPa";
 
-    // ---- WiFi iš paskutinio įrašo (heartbeat OK) ----
     const wifiIconEl = document.getElementById("wifi-icon");
     const wifiRssiEl = document.getElementById("wifi-rssi");
     const wifiPctEl = document.getElementById("wifi-percent");
@@ -130,7 +122,6 @@ async function loadHistory() {
     const data = await res.json();
     if (!data.length) return;
 
-    // Filtruojame tik pilnus sensorius (IGNORUOJAM heartbeat)
     const clean = data.filter(x =>
       x.moisture !== null &&
       x.temperature !== null &&
@@ -173,8 +164,10 @@ async function loadHistory() {
   }
 }
 
+// ---- RELES MYGTUKAS (sutvarkyta logika) ----
 document.getElementById("pump-btn").addEventListener("click", async () => {
-  const isOn = document.getElementById("pump-btn").classList.contains("active");
+  const btn = document.getElementById("pump-btn");
+  const isOn = btn.classList.contains("active");
   const action = isOn ? "pump_off" : "pump_on";
 
   const res = await fetch(`${API}/api/watering/command`, {
@@ -185,10 +178,10 @@ document.getElementById("pump-btn").addEventListener("click", async () => {
 
   const data = await res.json();
   console.log("Komanda išsiųsta:", data);
+
+  // 🔥 BŪTINA – perjungia mygtuko būseną
+  btn.classList.toggle("active");
 });
-
-
-
 
 // ---- Startas ----
 loadLatest();
