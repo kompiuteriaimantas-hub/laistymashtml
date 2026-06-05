@@ -1,5 +1,7 @@
 const API = "https://laistymassodas.onrender.com";
 
+app.use(express.static("."));
+
 // ---- WiFi padalų logika ----
 function wifiBars(rssi) {
   if (rssi >= -50) return 4;
