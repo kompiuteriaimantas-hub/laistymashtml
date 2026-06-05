@@ -13,9 +13,10 @@ function sbHeaders(extra = {}) {
 async function fetchStatus() {
     try {
         const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/status?select=moisture_percent,temperature_c,pressure_hpa,wifi_rssi,relay,lockdown,usage_bytes,updated_at&order=updated_at.desc&limit=1`,
+            `${SUPABASE_URL}/rest/v1/status?select=moisture_percent,temperature_c,pressure_hpa,wifi_rssi,relay,lockdown,usage_bytes&order=id.desc&limit=1`,
             { headers: sbHeaders() }
         );
+
         const arr = await res.json();
         const data = arr[0] || {};
 
@@ -28,7 +29,7 @@ async function fetchStatus() {
         document.getElementById("lockdownState").innerText = data.lockdown ? "TAIP" : "NE";
 
         const statusEl = document.getElementById("onlineStatus");
-        const online = !!data.updated_at;
+        const online = !!data.moisture_percent;
         statusEl.innerText = online ? "ONLINE" : "OFFLINE";
         statusEl.style.color = online ? "#00ff00" : "#ffcc33";
 
@@ -67,48 +68,27 @@ async function sendRelayCommand(state) {
 }
 
 async function calibrateDry() {
-    try {
-        await fetch(
-            `${SUPABASE_URL}/rest/v1/config`,
-            {
-                method: "PATCH",
-                headers: sbHeaders({ Prefer: "return=minimal" }),
-                body: JSON.stringify({ dry_value: 800 })
-            }
-        );
-    } catch (e) {
-        console.error("calibrateDry error", e);
-    }
+    await fetch(`${SUPABASE_URL}/rest/v1/config`, {
+        method: "PATCH",
+        headers: sbHeaders({ Prefer: "return=minimal" }),
+        body: JSON.stringify({ dry_value: 800 })
+    });
 }
 
 async function calibrateWet() {
-    try {
-        await fetch(
-            `${SUPABASE_URL}/rest/v1/config`,
-            {
-                method: "PATCH",
-                headers: sbHeaders({ Prefer: "return=minimal" }),
-                body: JSON.stringify({ wet_value: 300 })
-            }
-        );
-    } catch (e) {
-        console.error("calibrateWet error", e);
-    }
+    await fetch(`${SUPABASE_URL}/rest/v1/config`, {
+        method: "PATCH",
+        headers: sbHeaders({ Prefer: "return=minimal" }),
+        body: JSON.stringify({ wet_value: 300 })
+    });
 }
 
 async function resetLockdown() {
-    try {
-        await fetch(
-            `${SUPABASE_URL}/rest/v1/status`,
-            {
-                method: "PATCH",
-                headers: sbHeaders({ Prefer: "return=minimal" }),
-                body: JSON.stringify({ lockdown: false })
-            }
-        );
-    } catch (e) {
-        console.error("resetLockdown error", e);
-    }
+    await fetch(`${SUPABASE_URL}/rest/v1/status`, {
+        method: "PATCH",
+        headers: sbHeaders({ Prefer: "return=minimal" }),
+        body: JSON.stringify({ lockdown: false })
+    });
 }
 
 window.addEventListener("DOMContentLoaded", () => {
