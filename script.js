@@ -1,97 +1,159 @@
-const MICRO_URL = "https://tavo-micro.deta.dev";
+const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+
+function sbHeaders(extra = {}) {
+    return {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json",
+        ...extra
+    };
+}
 
 let moistureChart, tempChart, pressureChart;
 
-
+// STATUS: paskutinis įrašas iš status lentelės
 async function fetchStatus() {
-    const res = await fetch(MICRO_URL + "/ui/status");
-    const data = await res.json();
+    try {
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/status?select=*&order=updated_at.desc&limit=1`,
+            { headers: sbHeaders() }
+        );
+        const arr = await res.json();
+        const data = arr[0] || {};
 
-    document.getElementById("moisture").innerText = data.moisturePercent ?? "-";
-    document.getElementById("temperature").innerText = data.temperatureC ?? "-";
-    document.getElementById("pressure").innerText = data.pressureHPa ?? "-";
-    document.getElementById("wifi").innerText = data.wifiRssi ?? "-";
+        document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
+        document.getElementById("temperature").innerText = data.temperature_c ?? "-";
+        document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
+        document.getElementById("wifi").innerText = data.wifi_rssi ?? "-";
 
-    document.getElementById("relayState").innerText = data.relay ? "Įjungta" : "Išjungta";
-    document.getElementById("lockdownState").innerText = data.lockdown ? "TAIP" : "NE";
+        document.getElementById("relayState").innerText = data.relay ? "Įjungta" : "Išjungta";
+        document.getElementById("lockdownState").innerText = data.lockdown ? "TAIP" : "NE";
 
-    // Online/offline
-    const status = document.getElementById("onlineStatus");
-    status.innerText = data.online ? "ONLINE" : "OFFLINE";
-    status.style.color = data.online ? "#00ff00" : "#ff4444";
+        const status = document.getElementById("onlineStatus");
+        const online = !!data.updated_at;
+        status.innerText = online ? "ONLINE" : "OFFLINE";
+        status.style.color = online ? "#00ff00" : "#ff4444";
 
-    // Duomenų naudojimas
-    let kb = data.usageBytes / 1024;
-    let mb = kb / 1024;
-    document.getElementById("usage").innerText =
-        mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
+        const usageBytes = data.usage_bytes || 0;
+        let kb = usageBytes / 1024;
+        let mb = kb / 1024;
+        document.getElementById("usage").innerText =
+            mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
 
-    // Relay button
-    const btn = document.getElementById("relayBtn");
-    if (data.relay) {
-        btn.innerText = "Išjungti";
-        btn.classList.add("off");
-    } else {
-        btn.innerText = "Įjungti";
-        btn.classList.remove("off");
+        const btn = document.getElementById("relayBtn");
+        if (data.relay) {
+            btn.innerText = "Išjungti";
+            btn.classList.add("off");
+        } else {
+            btn.innerText = "Įjungti";
+            btn.classList.remove("off");
+        }
+    } catch (e) {
+        console.error("fetchStatus error", e);
     }
 }
 
+// HISTORY: paskutiniai N įrašų grafams
 async function fetchHistory() {
-    const res = await fetch(MICRO_URL + "/ui/history");
-    const items = await res.json();
+    try {
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/history?select=*&order=id.desc&limit=100`,
+            { headers: sbHeaders() }
+        );
+        const itemsDesc = await res.json();
+        const items = itemsDesc.reverse();
 
-    const labels = items.map(i => i.time);
-    const moist = items.map(i => i.moisturePercent);
-    const temp = items.map(i => i.temperatureC);
-    const press = items.map(i => i.pressureHPa);
+        const labels = items.map(i => i.time);
+        const moist = items.map(i => i.moisture_percent);
+        const temp = items.map(i => i.temperature_c);
+        const press = items.map(i => i.pressure_hpa);
 
-    moistureChart.data.labels = labels;
-    moistureChart.data.datasets[0].data = moist;
-    moistureChart.update();
+        moistureChart.data.labels = labels;
+        moistureChart.data.datasets[0].data = moist;
+        moistureChart.update();
 
-    tempChart.data.labels = labels;
-    tempChart.data.datasets[0].data = temp;
-    tempChart.update();
+        tempChart.data.labels = labels;
+        tempChart.data.datasets[0].data = temp;
+        tempChart.update();
 
-    pressureChart.data.labels = labels;
-    pressureChart.data.datasets[0].data = press;
-    pressureChart.update();
+        pressureChart.data.labels = labels;
+        pressureChart.data.datasets[0].data = press;
+        pressureChart.update();
+    } catch (e) {
+        console.error("fetchHistory error", e);
+    }
 }
 
+// RELĖ: įrašom komandą į commands lentelę
+async function sendRelayCommand(state) {
+    try {
+        await fetch(
+            `${SUPABASE_URL}/rest/v1/commands`,
+            {
+                method: "POST",
+                headers: sbHeaders({ "Prefer": "return=minimal" }),
+                body: JSON.stringify({ relay_state: state })
+            }
+        );
+    } catch (e) {
+        console.error("sendRelayCommand error", e);
+    }
+}
 
-// Relay toggle
 document.getElementById("relayBtn").addEventListener("click", async () => {
     const isOn = document.getElementById("relayBtn").classList.contains("off");
-    await fetch(MICRO_URL + "/ui/relay", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({state: isOn ? "off" : "on"})
-    });
+    await sendRelayCommand(isOn ? "off" : "on");
 });
 
-// Calibration
+// KALIBRACIJA: config lentelė
 async function calibrateDry() {
-    await fetch(MICRO_URL + "/ui/calibrate", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({dry: 800})
-    });
+    try {
+        await fetch(
+            `${SUPABASE_URL}/rest/v1/config`,
+            {
+                method: "PATCH",
+                headers: sbHeaders({ "Prefer": "return=minimal" }),
+                body: JSON.stringify({ dry_value: 800 })
+            }
+        );
+    } catch (e) {
+        console.error("calibrateDry error", e);
+    }
 }
 
 async function calibrateWet() {
-    await fetch(MICRO_URL + "/ui/calibrate", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({wet: 300})
-    });
+    try {
+        await fetch(
+            `${SUPABASE_URL}/rest/v1/config`,
+            {
+                method: "PATCH",
+                headers: sbHeaders({ "Prefer": "return=minimal" }),
+                body: JSON.stringify({ wet_value: 300 })
+            }
+        );
+    } catch (e) {
+        console.error("calibrateWet error", e);
+    }
 }
 
+// RESET: nuimam lockdown iš status
 async function resetLockdown() {
-    await fetch(MICRO_URL + "/ui/reset", {method: "POST"});
+    try {
+        await fetch(
+            `${SUPABASE_URL}/rest/v1/status`,
+            {
+                method: "PATCH",
+                headers: sbHeaders({ "Prefer": "return=minimal" }),
+                body: JSON.stringify({ lockdown: false })
+            }
+        );
+    } catch (e) {
+        console.error("resetLockdown error", e);
+    }
 }
 
-// Init chart
+// CHART INIT
 const ctxM = document.getElementById("moistureChart").getContext("2d");
 const ctxT = document.getElementById("tempChart").getContext("2d");
 const ctxP = document.getElementById("pressureChart").getContext("2d");
@@ -138,8 +200,7 @@ pressureChart = new Chart(ctxP, {
     }
 });
 
-
-// Auto refresh
+// AUTO REFRESH
 setInterval(fetchStatus, 3000);
 setInterval(fetchHistory, 15000);
 
