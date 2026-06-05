@@ -42,7 +42,18 @@ async function loadLatest() {
     const data = await res.json();
     if (!data.length) return;
 
-    const last = data[0];
+    // Surandame paskutinį pilną sensorių įrašą (ne heartbeat)
+const last = data.find(row =>
+  row.moisture !== null &&
+  row.temperature !== null &&
+  row.pressure !== null
+);
+
+if (!last) {
+  console.warn("Nėra pilnų sensorių įrašų");
+  return;
+}
+
 
     // ---- ESP ONLINE/OFFLINE DETEKTORIUS ----
     const lastTime = new Date(last.time).getTime();
