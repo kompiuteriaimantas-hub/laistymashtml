@@ -16,9 +16,10 @@ let moistureChart, tempChart, pressureChart;
 async function fetchStatus() {
     try {
         const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/status?select=*&order=updated_at.desc&limit=1`,
+            `${SUPABASE_URL}/rest/v1/status?select=moisture_percent,temperature_c,pressure_hpa,wifi_rssi,relay,lockdown,usage_bytes,updated_at&order=updated_at.desc&limit=1`,
             { headers: sbHeaders() }
         );
+
         const arr = await res.json();
         const data = arr[0] || {};
 
@@ -58,9 +59,10 @@ async function fetchStatus() {
 async function fetchHistory() {
     try {
         const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/history?select=*&order=id.desc&limit=100`,
+            `${SUPABASE_URL}/rest/v1/history?select=moisture_percent,temperature_c,pressure_hpa,time&order=id.desc&limit=100`,
             { headers: sbHeaders() }
         );
+
         const itemsDesc = await res.json();
         const items = itemsDesc.reverse();
 
@@ -106,7 +108,7 @@ document.getElementById("relayBtn").addEventListener("click", async () => {
     await sendRelayCommand(isOn ? "off" : "on");
 });
 
-// KALIBRACIJA: config lentelė
+// KALIBRACIJA
 async function calibrateDry() {
     try {
         await fetch(
@@ -137,7 +139,7 @@ async function calibrateWet() {
     }
 }
 
-// RESET: nuimam lockdown iš status
+// RESET LOCKDOWN
 async function resetLockdown() {
     try {
         await fetch(
