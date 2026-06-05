@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <title>Laistymo Sistema</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<h1>🌱 Laistymo Sistema</h1>
+
+<div id="statusBox">
+    <p><b>Būsena:</b> <span id="onlineStatus">Tikrinama...</span></p>
+    <p><b>Drėgmė:</b> <span id="moisture">-</span>%</p>
+    <p><b>Temperatūra:</b> <span id="temperature">-</span>°C</p>
+    <p><b>Slėgis:</b> <span id="pressure">-</span> hPa</p>
+    <p><b>WiFi RSSI:</b> <span id="wifi">-</span> dBm</p>
+    <p><b>Relė:</b> <span id="relayState">-</span></p>
+    <p><b>Lockdown:</b> <span id="lockdownState">-</span></p>
+    <p><b>Sunaudota duomenų:</b> <span id="usage">-</span></p>
+</div>
+
+<h2>🔌 Relės valdymas</h2>
+<button onclick="relayOn()">Įjungti</button>
+<button onclick="relayOff()">Išjungti</button>
+
+<h2>🔧 Kalibracija</h2>
+<button onclick="calibrateDry()">SAUSA</button>
+<button onclick="calibrateWet()">DRĖGNA</button>
+
+<h2>🔁 Lockdown Reset</h2>
+<button onclick="resetLockdown()">Atstatyti sistemą</button>
+
+<h2>📊 Grafikai</h2>
+<canvas id="chartMoisture"></canvas>
+<canvas id="chartTemp"></canvas>
+<canvas id="chartPressure"></canvas>
+
+<script src="script.js"></script>
+</body>
+</html>
