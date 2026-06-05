@@ -98,11 +98,17 @@ async function loadDataUsage() {
     if (!data.length) return;
 
     let totalBytes = 0;
+
+    // Skaičiuojame bytes iš VISŲ įrašų (heartbeat + pilni sensoriai)
     for (const row of data) {
-      if (row.bytes) totalBytes += row.bytes;
+      if (row.bytes !== null && row.bytes !== undefined) {
+        totalBytes += row.bytes;
+      }
     }
 
+    // Konvertuojame į MB
     const mb = (totalBytes / 1024 / 1024).toFixed(2);
+
     document.getElementById("data-usage").innerText =
       "Web duomenys: " + mb + " MB";
 
@@ -110,6 +116,7 @@ async function loadDataUsage() {
     console.error("Klaida skaičiuojant duomenis:", err);
   }
 }
+
 
 // ---- GRAFIKAI ----
 let moistChart = null;
