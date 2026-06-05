@@ -1,6 +1,7 @@
 const MICRO_URL = "https://tavo-micro.deta.dev";
 
-let moistureChart;
+let moistureChart, tempChart, pressureChart;
+
 
 async function fetchStatus() {
     const res = await fetch(MICRO_URL + "/ui/status");
@@ -42,11 +43,22 @@ async function fetchHistory() {
 
     const labels = items.map(i => i.time);
     const moist = items.map(i => i.moisturePercent);
+    const temp = items.map(i => i.temperatureC);
+    const press = items.map(i => i.pressureHPa);
 
     moistureChart.data.labels = labels;
     moistureChart.data.datasets[0].data = moist;
     moistureChart.update();
+
+    tempChart.data.labels = labels;
+    tempChart.data.datasets[0].data = temp;
+    tempChart.update();
+
+    pressureChart.data.labels = labels;
+    pressureChart.data.datasets[0].data = press;
+    pressureChart.update();
 }
+
 
 // Relay toggle
 document.getElementById("relayBtn").addEventListener("click", async () => {
@@ -80,8 +92,11 @@ async function resetLockdown() {
 }
 
 // Init chart
-const ctx = document.getElementById("moistureChart").getContext("2d");
-moistureChart = new Chart(ctx, {
+const ctxM = document.getElementById("moistureChart").getContext("2d");
+const ctxT = document.getElementById("tempChart").getContext("2d");
+const ctxP = document.getElementById("pressureChart").getContext("2d");
+
+moistureChart = new Chart(ctxM, {
     type: "line",
     data: {
         labels: [],
@@ -94,6 +109,35 @@ moistureChart = new Chart(ctx, {
         }]
     }
 });
+
+tempChart = new Chart(ctxT, {
+    type: "line",
+    data: {
+        labels: [],
+        datasets: [{
+            label: "Temperatūra °C",
+            data: [],
+            borderColor: "#fb8c00",
+            backgroundColor: "rgba(251,140,0,0.1)",
+            tension: 0.25
+        }]
+    }
+});
+
+pressureChart = new Chart(ctxP, {
+    type: "line",
+    data: {
+        labels: [],
+        datasets: [{
+            label: "Slėgis hPa",
+            data: [],
+            borderColor: "#1e88e5",
+            backgroundColor: "rgba(30,136,229,0.1)",
+            tension: 0.25
+        }]
+    }
+});
+
 
 // Auto refresh
 setInterval(fetchStatus, 3000);
