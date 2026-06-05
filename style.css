@@ -1,20 +1,27 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background: #eef2f3;
+    color: #222;
 }
 
 .header {
     background: #2e7d32;
     color: white;
-    padding: 15px 20px;
+    padding: 12px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
 }
 
 .header h1 {
     margin: 0;
+    font-size: 20px;
 }
 
 .status {
@@ -22,46 +29,70 @@ body {
     opacity: 0.9;
 }
 
+.usage-box {
+    text-align: right;
+    font-size: 13px;
+}
+
+.usage-box span:last-child {
+    font-weight: bold;
+    display: block;
+}
+
+main {
+    padding: 12px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
 .cards {
     display: flex;
-    gap: 15px;
-    padding: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .card {
     background: white;
-    padding: 15px;
-    border-radius: 12px;
-    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    flex: 1 1 100%;
     position: relative;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    min-width: 0;
+}
+
+@media (min-width: 600px) {
+    .card {
+        flex: 1 1 calc(33.333% - 8px);
+    }
 }
 
 .card h2 {
     margin: 0;
-    font-size: 18px;
+    font-size: 16px;
 }
 
 .value {
-    font-size: 32px;
-    font-weight: bold;
-    margin-top: 10px;
+    font-size: 28px;
+    font-weight: 600;
+    margin-top: 8px;
 }
 
 .icon {
     position: absolute;
-    bottom: 10px;
+    bottom: 8px;
     right: 10px;
-    font-size: 28px;
-    opacity: 0.3;
+    font-size: 24px;
+    opacity: 0.25;
 }
 
-.relay-section {
+.relay-section,
+.calibration {
     background: white;
-    margin: 0 20px;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    margin-top: 12px;
+    padding: 14px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .relay-status {
@@ -69,16 +100,17 @@ body {
 }
 
 .relay-btn {
-    width: 140px;
-    height: 140px;
+    width: 130px;
+    height: 130px;
     border-radius: 50%;
     border: none;
     background: #43a047;
     color: white;
-    font-size: 20px;
+    font-size: 18px;
     cursor: pointer;
     display: block;
-    margin: 15px auto;
+    margin: 10px auto;
+    transition: background 0.2s;
 }
 
 .relay-btn.off {
@@ -88,29 +120,24 @@ body {
 .relay-extra {
     display: flex;
     justify-content: space-between;
-    font-size: 14px;
-}
-
-.calibration {
-    background: white;
-    margin: 20px;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    font-size: 13px;
+    margin-top: 6px;
 }
 
 .cal-buttons {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
 }
 
 .btn {
-    padding: 10px 20px;
+    padding: 8px 14px;
     border: none;
     border-radius: 8px;
     color: white;
     cursor: pointer;
+    font-size: 14px;
 }
 
 .dry {
@@ -124,12 +151,4 @@ body {
 .reset {
     background: #e53935;
     width: 100%;
-}
-
-.chart-section {
-    background: white;
-    margin: 20px;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
 }

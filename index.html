@@ -2,18 +2,18 @@
 <html lang="lt">
 <head>
     <meta charset="UTF-8">
-    <title>Laistymo Sistema</title>
+    <title>Laistymo sistema</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
 <header class="header">
-    <div class="left">
-        <h1>🌱 Laistymo Sistema</h1>
+    <div>
+        <h1>🌱 Laistymo sistema</h1>
         <div id="onlineStatus" class="status">Tikrinama...</div>
     </div>
-    <div class="right">
+    <div class="usage-box">
         <span>Duomenų naudojimas:</span>
         <span id="usage">-</span>
     </div>
@@ -42,7 +42,7 @@
     </section>
 
     <section class="relay-section">
-        <h2>🔆 Relė valdymas</h2>
+        <h2>🔆 Relė</h2>
         <div class="relay-status">Būsena: <span id="relayState">-</span></div>
 
         <button id="relayBtn" class="relay-btn">Įjungti</button>
@@ -56,28 +56,16 @@
     <section class="calibration">
         <h2>Kalibracija</h2>
         <div class="cal-buttons">
-            <button class="btn dry" onclick="calibrateDry()">SAUSA</button>
-            <button class="btn wet" onclick="calibrateWet()">DRĖGNA</button>
+            <button class="btn dry" id="btnDry">SAUSA</button>
+            <button class="btn wet" id="btnWet">DRĖGNA</button>
         </div>
 
         <h2>Sistemos valdymas</h2>
-        <button class="btn reset" onclick="resetLockdown()">Atstatyti sistemą</button>
+        <button class="btn reset" id="btnReset">Atstatyti sistemą</button>
     </section>
-
-    <section class="chart-section">
-    <h2>Drėgmė %</h2>
-    <canvas id="moistureChart"></canvas>
-
-    <h2>Temperatūra °C</h2>
-    <canvas id="tempChart"></canvas>
-
-    <h2>Slėgis hPa</h2>
-    <canvas id="pressureChart"></canvas>
-</section>
-
 
 </main>
 
-<script src="script_v2.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
