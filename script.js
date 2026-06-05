@@ -232,7 +232,95 @@ document.getElementById("pump-btn").addEventListener("click", async () => {
 
 // ---- Startas ----
 loadLatest();
-loadHistory();
+// ---- Grafikai ----
+async function loadHistory() {
+  try {
+    const res = await fetch(`${API}/api/sensors`);
+    const data = await res.json();
+    if (!data.length) return;
+
+    // Filtruojame tik pilnus sensorių įrašus (IGNORUOJAM heartbeat)
+    const clean = data.filter(x =>
+      x.moisture !== null &&
+      x.temperature !== null &&
+      x.pressure !== null
+    );
+
+    if (!clean.length) {
+      console.warn("Nėra pilnų sensorių istorijos");
+      return;
+    }
+
+    const labels = clean
+      .map((x) => {
+        const d = new Date(x.time);
+        return (
+          d.toLocaleDateString("lt-LT", { month: "2-digit", day: "2-digit" }) +
+          " " +
+          d.toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })
+        );
+      })
+      .reverse();
+
+    const moist = clean.map((x) => x.moisture).reverse();
+    const temp = clean.map((x) => x.temperature).reverse();
+    const press = clean.map((x) => x.pressure).reverse();
+
+    // sunaikinam senus grafikus
+    if (moistChart) moistChart.destroy();
+    if (tempChart) tempChart.destroy();
+    if (pressChart) pressChart.destroy();
+
+    moistChart = new Chart(document.getElementById("moistureChart"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Drėgmė (%)",
+            data: moist,
+            borderColor: "#4CAF50",
+            tension: 0.3,
+          },
+        ],
+      },
+    });
+
+    tempChart = new Chart(document.getElementById("tempChart"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Temperatūra (°C)",
+            data: temp,
+            borderColor: "#FF5722",
+            tension: 0.3,
+          },
+        ],
+      },
+    });
+
+    pressChart = new Chart(document.getElementById("pressureChart"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Slėgis (hPa)",
+            data: press,
+            borderColor: "#2196F3",
+            tension: 0.3,
+          },
+        ],
+      },
+    });
+
+  } catch (err) {
+    console.error("Klaida istorijoje:", err);
+  }
+}
+
 loadDataUsage();
 
 // realaus laiko atnaujinimai
