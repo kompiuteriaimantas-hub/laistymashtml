@@ -1,3 +1,5 @@
+window.addEventListener("DOMContentLoaded", () => {
+
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
@@ -12,7 +14,7 @@ function sbHeaders(extra = {}) {
 
 let moistureChart, tempChart, pressureChart;
 
-// STATUS: paskutinis įrašas iš status lentelės
+// STATUS
 async function fetchStatus() {
     try {
         const res = await fetch(
@@ -55,7 +57,7 @@ async function fetchStatus() {
     }
 }
 
-// HISTORY: paskutiniai N įrašų grafams
+// HISTORY
 async function fetchHistory() {
     try {
         const res = await fetch(
@@ -87,7 +89,7 @@ async function fetchHistory() {
     }
 }
 
-// RELĖ: įrašom komandą į commands lentelę
+// RELĖ
 async function sendRelayCommand(state) {
     try {
         await fetch(
@@ -110,49 +112,27 @@ document.getElementById("relayBtn").addEventListener("click", async () => {
 
 // KALIBRACIJA
 async function calibrateDry() {
-    try {
-        await fetch(
-            `${SUPABASE_URL}/rest/v1/config`,
-            {
-                method: "PATCH",
-                headers: sbHeaders({ "Prefer": "return=minimal" }),
-                body: JSON.stringify({ dry_value: 800 })
-            }
-        );
-    } catch (e) {
-        console.error("calibrateDry error", e);
-    }
+    await fetch(`${SUPABASE_URL}/rest/v1/config`, {
+        method: "PATCH",
+        headers: sbHeaders({ "Prefer": "return=minimal" }),
+        body: JSON.stringify({ dry_value: 800 })
+    });
 }
 
 async function calibrateWet() {
-    try {
-        await fetch(
-            `${SUPABASE_URL}/rest/v1/config`,
-            {
-                method: "PATCH",
-                headers: sbHeaders({ "Prefer": "return=minimal" }),
-                body: JSON.stringify({ wet_value: 300 })
-            }
-        );
-    } catch (e) {
-        console.error("calibrateWet error", e);
-    }
+    await fetch(`${SUPABASE_URL}/rest/v1/config`, {
+        method: "PATCH",
+        headers: sbHeaders({ "Prefer": "return=minimal" }),
+        body: JSON.stringify({ wet_value: 300 })
+    });
 }
 
-// RESET LOCKDOWN
 async function resetLockdown() {
-    try {
-        await fetch(
-            `${SUPABASE_URL}/rest/v1/status`,
-            {
-                method: "PATCH",
-                headers: sbHeaders({ "Prefer": "return=minimal" }),
-                body: JSON.stringify({ lockdown: false })
-            }
-        );
-    } catch (e) {
-        console.error("resetLockdown error", e);
-    }
+    await fetch(`${SUPABASE_URL}/rest/v1/status`, {
+        method: "PATCH",
+        headers: sbHeaders({ "Prefer": "return=minimal" }),
+        body: JSON.stringify({ lockdown: false })
+    });
 }
 
 // CHART INIT
@@ -162,44 +142,17 @@ const ctxP = document.getElementById("pressureChart").getContext("2d");
 
 moistureChart = new Chart(ctxM, {
     type: "line",
-    data: {
-        labels: [],
-        datasets: [{
-            label: "Drėgmė %",
-            data: [],
-            borderColor: "#43a047",
-            backgroundColor: "rgba(67,160,71,0.1)",
-            tension: 0.25
-        }]
-    }
+    data: { labels: [], datasets: [{ label: "Drėgmė %", data: [], borderColor: "#43a047", backgroundColor: "rgba(67,160,71,0.1)", tension: 0.25 }] }
 });
 
 tempChart = new Chart(ctxT, {
     type: "line",
-    data: {
-        labels: [],
-        datasets: [{
-            label: "Temperatūra °C",
-            data: [],
-            borderColor: "#fb8c00",
-            backgroundColor: "rgba(251,140,0,0.1)",
-            tension: 0.25
-        }]
-    }
+    data: { labels: [], datasets: [{ label: "Temperatūra °C", data: [], borderColor: "#fb8c00", backgroundColor: "rgba(251,140,0,0.1)", tension: 0.25 }] }
 });
 
 pressureChart = new Chart(ctxP, {
     type: "line",
-    data: {
-        labels: [],
-        datasets: [{
-            label: "Slėgis hPa",
-            data: [],
-            borderColor: "#1e88e5",
-            backgroundColor: "rgba(30,136,229,0.1)",
-            tension: 0.25
-        }]
-    }
+    data: { labels: [], datasets: [{ label: "Slėgis hPa", data: [], borderColor: "#1e88e5", backgroundColor: "rgba(30,136,229,0.1)", tension: 0.25 }] }
 });
 
 // AUTO REFRESH
@@ -208,3 +161,5 @@ setInterval(fetchHistory, 15000);
 
 fetchStatus();
 fetchHistory();
+
+});
