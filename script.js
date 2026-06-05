@@ -174,33 +174,19 @@ async function loadHistory() {
 }
 
 document.getElementById("pump-btn").addEventListener("click", async () => {
-  try {
-    const isOn = document.getElementById("pump-btn").classList.contains("active");
+  const isOn = document.getElementById("pump-btn").classList.contains("active");
+  const action = isOn ? "pump_off" : "pump_on";
 
-    const action = isOn ? "pump_off" : "pump_on";
+  const res = await fetch(`${API}/api/watering/command`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action })
+  });
 
-    const res = await fetch(`${API}/api/watering`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action })
-    });
-
-    const data = await res.json();
-
-    if (data.status === "ON") {
-      document.getElementById("pump-btn").innerText = "IŠJUNGTI";
-      document.getElementById("pump-btn").classList.add("active");
-      document.getElementById("pump-status").innerText = "Siurblys: įjungtas";
-    } else {
-      document.getElementById("pump-btn").innerText = "ĮJUNGTI";
-      document.getElementById("pump-btn").classList.remove("active");
-      document.getElementById("pump-status").innerText = "Siurblys: išjungtas";
-    }
-
-  } catch (err) {
-    console.error("Klaida valdant siurblį:", err);
-  }
+  const data = await res.json();
+  console.log("Komanda išsiųsta:", data);
 });
+
 
 
 
