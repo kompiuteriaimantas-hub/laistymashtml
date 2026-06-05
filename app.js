@@ -12,10 +12,55 @@ function sbHeaders(extra = {}) {
 
 async function fetchStatus() {
     try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+
         const res = await fetch(
             `${SUPABASE_URL}/rest/v1/status?select=moisture_percent,temperature_c,pressure_hpa,wifi_rssi,relay,lockdown,usage_bytes&order=id.desc&limit=1`,
-            { headers: sbHeaders() }
+            { 
+                headers: sbHeaders(),
+                signal: controller.signal
+            }
         );
+
+        clearTimeout(timeout);
+
+        const arr = await res.json();
+        const data = arr[0] || null;
+
+        if (!data) {
+            document.getElementById("onlineStatus").innerText = "OFFLINE";
+            document.getElementById("onlineStatus").style.color = "#ffcc33";
+            return;
+        }
+
+        document.getElementById("moisture").innerText = data.moisture_percent;
+        document.getElementById("temperature").innerText = data.temperature_c;
+        document.getElementById("pressure").innerText = data.pressure_hpa;
+        document.getElementById("wifi").innerText = data.wifi_rssi;
+
+        document.getElementById("relayState").innerText = data.relay ? "Įjungta" : "Išjungta";
+        document.getElementById("lockdownState").innerText = data.lockdown ? "TAIP" : "NE";
+
+        const usageBytes = data.usage_bytes || 0;
+        const kb = usageBytes / 1024;
+        const mb = kb / 1024;
+        document.getElementById("usage").innerText =
+            mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
+
+        document.getElementById("onlineStatus").innerText = "ONLINE";
+        document.getElementById("onlineStatus").style.color = "#00ff00";
+
+    } catch (e) {
+        document.getElementById("onlineStatus").innerText = "OFFLINE";
+        document.getElementById("onlineStatus").style.color = "#ffcc33";
+    }
+}
+
+// atsinaujina kas 5 sek
+setInterval(fetchStatus, 5000);
+fetchStatus();
+
 
         const arr = await res.json();
         const data = arr[0] || {};
