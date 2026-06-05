@@ -7,99 +7,69 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<div class="app">
 
-    <header class="top-bar">
-        <div class="title">
-            🌱 <span>Laistymo Sistema</span>
+<header class="header">
+    <div class="left">
+        <h1>🌱 Laistymo Sistema</h1>
+        <div id="onlineStatus" class="status">Tikrinama...</div>
+    </div>
+    <div class="right">
+        <span>Duomenų naudojimas:</span>
+        <span id="usage">-</span>
+    </div>
+</header>
+
+<main>
+
+    <section class="cards">
+        <div class="card">
+            <h2>Drėgmė</h2>
+            <div class="value"><span id="moisture">-</span>%</div>
+            <div class="icon">💧</div>
         </div>
-        <div class="top-right">
-            <div class="status-pill">
-                <span class="status-dot" id="onlineDot"></span>
-                <span id="onlineText">Tikrinama...</span>
-            </div>
-            <div class="usage-box">
-                <span class="usage-label">Duomenų naudojimas:</span>
-                <span id="usageText">-</span>
-            </div>
+
+        <div class="card">
+            <h2>Temperatūra</h2>
+            <div class="value"><span id="temperature">-</span>°C</div>
+            <div class="icon">🌡️</div>
         </div>
-    </header>
 
-    <main class="content">
+        <div class="card">
+            <h2>Slėgis</h2>
+            <div class="value"><span id="pressure">-</span> hPa</div>
+            <div class="icon">🧭</div>
+        </div>
+    </section>
 
-        <section class="cards-row">
-            <div class="card card-blue">
-                <div class="card-title">Drėgmė</div>
-                <div class="card-value">
-                    <span id="moistureValue">-</span><span class="unit">%</span>
-                </div>
-                <div class="card-icon">💧</div>
-            </div>
+    <section class="relay-section">
+        <h2>🔆 Relė valdymas</h2>
+        <div class="relay-status">Būsena: <span id="relayState">-</span></div>
 
-            <div class="card card-orange">
-                <div class="card-title">Temperatūra</div>
-                <div class="card-value">
-                    <span id="tempValue">-</span><span class="unit">°C</span>
-                </div>
-                <div class="card-icon">🌡️</div>
-            </div>
+        <button id="relayBtn" class="relay-btn">Įjungti</button>
 
-            <div class="card card-teal">
-                <div class="card-title">Slėgis</div>
-                <div class="card-value">
-                    <span id="pressureValue">-</span><span class="unit">hPa</span>
-                </div>
-                <div class="card-icon">🧭</div>
-            </div>
-        </section>
+        <div class="relay-extra">
+            <span>Lockdown: <span id="lockdownState">-</span></span>
+            <span>WiFi: <span id="wifi">-</span> dBm</span>
+        </div>
+    </section>
 
-        <section class="middle-row">
-            <div class="card relay-card">
-                <div class="card-header">
-                    <div class="card-title">Relė valdymas</div>
-                    <div class="relay-state">
-                        Būsena: <span id="relayState">-</span>
-                    </div>
-                </div>
-                <div class="relay-center">
-                    <button id="relayToggleBtn" class="relay-btn">Įjungti</button>
-                </div>
-                <div class="extra-info">
-                    <span>Lockdown: <span id="lockdownState">-</span></span>
-                    <span>WiFi: <span id="wifiRssi">-</span> dBm</span>
-                </div>
-            </div>
+    <section class="calibration">
+        <h2>Kalibracija</h2>
+        <div class="cal-buttons">
+            <button class="btn dry" onclick="calibrateDry()">SAUSA</button>
+            <button class="btn wet" onclick="calibrateWet()">DRĖGNA</button>
+        </div>
 
-            <div class="card actions-card">
-                <div class="card-title">Kalibracija</div>
-                <div class="buttons-row">
-                    <button class="btn btn-dry" onclick="calibrateDry()">SAUSA</button>
-                    <button class="btn btn-wet" onclick="calibrateWet()">DRĖGNA</button>
-                </div>
-                <div class="card-title" style="margin-top:16px;">Sistemos valdymas</div>
-                <div class="buttons-row">
-                    <button class="btn btn-reset" onclick="resetLockdown()">Atstatyti sistemą</button>
-                </div>
-            </div>
-        </section>
+        <h2>Sistemos valdymas</h2>
+        <button class="btn reset" onclick="resetLockdown()">Atstatyti sistemą</button>
+    </section>
 
-        <section class="charts-row">
-            <div class="chart-card">
-                <div class="chart-title">Drėgmė %</div>
-                <canvas id="moistureChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <div class="chart-title">Temperatūra °C</div>
-                <canvas id="tempChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <div class="chart-title">Slėgis hPa</div>
-                <canvas id="pressureChart"></canvas>
-            </div>
-        </section>
+    <section class="chart-section">
+        <h2>Drėgmė %</h2>
+        <canvas id="moistureChart"></canvas>
+    </section>
 
-    </main>
-</div>
+</main>
 
 <script src="script.js"></script>
 </body>
