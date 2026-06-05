@@ -66,6 +66,20 @@ async function loadLatest() {
     document.getElementById("moisture-value").innerText = lastFull.moisture + "%";
     document.getElementById("temp-value").innerText = lastFull.temperature + "°C";
     document.getElementById("pressure-value").innerText = lastFull.pressure + " hPa";
+    document.getElementById("reset-data-btn").addEventListener("click", async () => {
+    if (!confirm("Tikrai ištrinti visus duomenis?")) return;
+
+  const res = await fetch(`${API}/api/sensors/reset`, {
+    method: "DELETE"
+  });
+
+  const data = await res.json();
+  console.log("Reset:", data);
+
+  // Po reset – iškart atnaujinam rodymą
+  document.getElementById("data-usage").innerText = "Web duomenys: 0 KB";
+});
+
 
     const wifiIconEl = document.getElementById("wifi-icon");
     const wifiRssiEl = document.getElementById("wifi-rssi");
