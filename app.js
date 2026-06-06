@@ -10,6 +10,39 @@ function sbHeaders(extra = {}) {
     };
 }
 
+/* -------------------------------
+   MĖNESIO ISTORIJOS FUNKCIJA
+--------------------------------*/
+async function fetchMonthlyUsage() {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
+        { headers: sbHeaders() }
+    );
+
+    return await res.json();
+}
+
+async function updateMonthlyUsageUI() {
+    const data = await fetchMonthlyUsage();
+
+    let total = 0;
+    for (const row of data) total += row.usage_bytes;
+
+    const kb = total / 1024;
+    const mb = kb / 1024;
+
+    document.getElementById("monthlyUsage").innerText =
+        mb >= 1
+            ? `Šio mėnesio sunaudota: ${mb.toFixed(2)} MB`
+            : `Šio mėnesio sunaudota: ${kb.toFixed(1)} KB`;
+}
+
+/* -------------------------------
+   STATUSO FUNKCIJA
+--------------------------------*/
 async function fetchStatus() {
     try {
         const res = await fetch(
@@ -25,31 +58,12 @@ async function fetchStatus() {
             return;
         }
 
-async function fetchMonthlyUsage() {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-    const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
-        { headers: sbHeaders() }
-    );
-
-    const arr = await res.json();
-    return arr;
-}
-
-
         // --- ONLINE/OFFLINE tikrinimas ---
         const now = Date.now();
 
-        // Normalizuojam timestamp (Supabase grąžina be laiko zonos ir su mikrosekundėmis)
         let ts = data.updated_at;
-
-        // Pašalinam mikrosekundes (.11875 → .118)
-        ts = ts.replace(/\.\d+/, "");
-
-        // Pridedam Z, kad JS suprastų kaip UTC
-        ts = ts + "Z";
+        ts = ts.replace(/\.\d+/, ""); // nukerpam mikrosekundes
+        ts = ts + "Z"; // pridedam laiko zoną
 
         const updated = new Date(ts).getTime();
 
@@ -94,6 +108,9 @@ async function fetchMonthlyUsage() {
     }
 }
 
+/* -------------------------------
+   BŪSENOS FUNKCIJOS
+--------------------------------*/
 function setOnline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "ONLINE";
@@ -106,6 +123,9 @@ function setOffline() {
     el.style.color = "#ffcc33";
 }
 
+/* -------------------------------
+   KOMANDOS
+--------------------------------*/
 async function sendRelayCommand(state) {
     await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
         method: "POST",
@@ -146,8 +166,12 @@ async function resetUsage() {
     });
 
     document.getElementById("usage").innerText = "0 KB";
+    updateMonthlyUsageUI();
 }
 
+/* -------------------------------
+   STARTAS
+--------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("relayBtn").addEventListener("click", async () => {
         const isOn = document.getElementById("relayBtn").classList.contains("off");
@@ -161,5 +185,8 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("resetUsage").addEventListener("click", resetUsage);
 
     fetchStatus();
+    updateMonthlyUsageUI();
+
     setInterval(fetchStatus, 5000);
+    setInterval(updateMonthlyUsageUI, 60000);
 });
