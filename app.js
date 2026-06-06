@@ -11,37 +11,7 @@ function sbHeaders(extra = {}) {
 }
 
 /* -------------------------------
-   MĖNESIO ISTORIJA
---------------------------------*/
-async function fetchMonthlyUsage() {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-    const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
-        { headers: sbHeaders() }
-    );
-
-    return await res.json();
-}
-
-async function updateMonthlyUsageUI() {
-    const data = await fetchMonthlyUsage();
-
-    let total = 0;
-    for (const row of data) total += row.usage_bytes;
-
-    const kb = total / 1024;
-    const mb = kb / 1024;
-
-    document.getElementById("monthlyUsage").innerText =
-        mb >= 1
-            ? `Šio mėnesio sunaudota: ${mb.toFixed(2)} MB`
-            : `Šio mėnesio sunaudota: ${kb.toFixed(1)} KB`;
-}
-
-/* -------------------------------
-   STATUSO FUNKCIJA
+   GREITAS STATUS FETCH (kas 500ms)
 --------------------------------*/
 async function fetchStatus() {
     try {
@@ -61,12 +31,10 @@ async function fetchStatus() {
         // --- ONLINE/OFFLINE ---
         const now = Date.now();
         let ts = data.updated_at;
-        ts = ts.replace(/\.\d+/, "");
-        ts = ts + "Z";
-
+        ts = ts.replace(/\.\d+/, "") + "Z";
         const updated = new Date(ts).getTime();
 
-        if (isNaN(updated) || now - updated > 15000) {
+        if (isNaN(updated) || now - updated > 5000) {
             setOffline();
         } else {
             setOnline();
@@ -108,7 +76,7 @@ async function fetchStatus() {
 }
 
 /* -------------------------------
-   BŪSENOS FUNKCIJOS
+   ONLINE / OFFLINE
 --------------------------------*/
 function setOnline() {
     const el = document.getElementById("onlineStatus");
@@ -123,14 +91,20 @@ function setOffline() {
 }
 
 /* -------------------------------
-   KOMANDOS
+   KOMANDOS — momentinis veikimas
 --------------------------------*/
 async function sendRelayCommand(state) {
     await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
         method: "POST",
-        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
+        headers: sbHeaders({
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+        }),
         body: JSON.stringify({ relay_state: state })
     });
+
+    // UI atsinaujina po 300ms
+    setTimeout(fetchStatus, 300);
 }
 
 async function calibrateDry() {
@@ -165,10 +139,9 @@ async function resetLockdown() {
 }
 
 /* -------------------------------
-   RESET USAGE — PATAISYTA
+   RESET USAGE
 --------------------------------*/
 async function resetUsage() {
-    // 1. Pasiimam naujausią ID
     const latest = await fetch(
         `${SUPABASE_URL}/rest/v1/status?select=id&order=id.desc&limit=1`,
         { headers: sbHeaders() }
@@ -176,7 +149,6 @@ async function resetUsage() {
     const arr = await latest.json();
     const id = arr[0].id;
 
-    // 2. PATCH su WHERE (teisingas būdas)
     await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.${id}`, {
         method: "PATCH",
         headers: sbHeaders({
@@ -186,9 +158,7 @@ async function resetUsage() {
         body: JSON.stringify({ usage_bytes: 0 })
     });
 
-    // 3. UI atnaujinimas
     document.getElementById("usage").innerText = "0 KB";
-    updateMonthlyUsageUI();
 }
 
 /* -------------------------------
@@ -198,7 +168,6 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("relayBtn").addEventListener("click", async () => {
         const isOn = document.getElementById("relayBtn").classList.contains("off");
         await sendRelayCommand(isOn ? "off" : "on");
-        setTimeout(fetchStatus, 1000);
     });
 
     document.getElementById("btnDry").addEventListener("click", calibrateDry);
@@ -207,8 +176,7 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("resetUsage").addEventListener("click", resetUsage);
 
     fetchStatus();
-    updateMonthlyUsageUI();
 
-    setInterval(fetchStatus, 1000);
-    setInterval(updateMonthlyUsageUI, 60000);
+    // GREITAS ATNAUJINIMAS — kas 500ms
+    setInterval(fetchStatus, 500);
 });
