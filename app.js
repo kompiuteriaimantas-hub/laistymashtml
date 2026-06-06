@@ -35,31 +35,6 @@ async function fetchStatus() {
             setOnline();
         }
 
-        // UI duomenys
-        document.getElementById("moisture").innerText = data.moisture_percent;
-        document.getElementById("temperature").innerText = data.temperature_c;
-        document.getElementById("pressure").innerText = data.pressure_hpa;
-        document.getElementById("wifi").innerText = data.wifi_rssi;
-
-        document.getElementById("relayState").innerText =
-            data.relay ? "Įjungta" : "Išjungta";
-
-        document.getElementById("lockdownState").innerText =
-            data.lockdown ? "TAIP" : "NE";
-
-        const usageBytes = data.usage_bytes || 0;
-        const kb = usageBytes / 1024;
-        const mb = kb / 1024;
-
-        document.getElementById("usage").innerText =
-            mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
-
-    } catch (err) {
-        setOffline();
-    }
-}
-
-
         // UI update
         document.getElementById("moisture").innerText = data.moisture_percent;
         document.getElementById("temperature").innerText = data.temperature_c;
@@ -78,8 +53,6 @@ async function fetchStatus() {
 
         document.getElementById("usage").innerText =
             mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
-
-        setOnline();
 
         // Relay button state
         const btn = document.getElementById("relayBtn");
