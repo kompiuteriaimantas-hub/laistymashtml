@@ -14,28 +14,51 @@ async function fetchStatus() {
     try {
         const res = await fetch(
             `${SUPABASE_URL}/rest/v1/status?select=*&order=id.desc&limit=1`,
-            {
-                headers: sbHeaders()
-            }
+            { headers: sbHeaders() }
         );
 
-        console.log("HTTP status:", res.status);
-
-        if (!res.ok) {
-            console.log("Fetch error:", await res.text());
-            setOffline();
-            return;
-        }
-
         const arr = await res.json();
-        console.log("JSON:", arr);
-
         const data = arr[0];
 
         if (!data) {
             setOffline();
             return;
         }
+
+        // Tikrinam ar ESP gyvas
+        const now = Date.now();
+        const updated = new Date(data.updated_at).getTime();
+
+        if (now - updated > 10000) { 
+            setOffline();
+        } else {
+            setOnline();
+        }
+
+        // UI duomenys
+        document.getElementById("moisture").innerText = data.moisture_percent;
+        document.getElementById("temperature").innerText = data.temperature_c;
+        document.getElementById("pressure").innerText = data.pressure_hpa;
+        document.getElementById("wifi").innerText = data.wifi_rssi;
+
+        document.getElementById("relayState").innerText =
+            data.relay ? "Įjungta" : "Išjungta";
+
+        document.getElementById("lockdownState").innerText =
+            data.lockdown ? "TAIP" : "NE";
+
+        const usageBytes = data.usage_bytes || 0;
+        const kb = usageBytes / 1024;
+        const mb = kb / 1024;
+
+        document.getElementById("usage").innerText =
+            mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
+
+    } catch (err) {
+        setOffline();
+    }
+}
+
 
         // UI update
         document.getElementById("moisture").innerText = data.moisture_percent;
