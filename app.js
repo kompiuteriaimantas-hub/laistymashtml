@@ -1,56 +1,64 @@
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+const SUPABASE_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
 function sbHeaders(extra = {}) {
     return {
         apikey: SUPABASE_KEY,
         Authorization: "Bearer " + SUPABASE_KEY,
-        "Content-Type": "application/json",
         ...extra
     };
 }
 
 async function fetchStatus() {
     try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000);
-
         const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/status?select=moisture_percent,temperature_c,pressure_hpa,wifi_rssi,relay,lockdown,usage_bytes&order=id.desc&limit=1`,
+            `${SUPABASE_URL}/rest/v1/status?select=*&order=id.desc&limit=1`,
             {
-                headers: sbHeaders(),
-                signal: controller.signal
+                headers: sbHeaders()
             }
         );
 
-        clearTimeout(timeout);
+        console.log("HTTP status:", res.status);
 
-        const arr = await res.json();
-        const data = arr[0] || null;
-
-        if (!data) {
-            document.getElementById("onlineStatus").innerText = "OFFLINE";
-            document.getElementById("onlineStatus").style.color = "#ffcc33";
+        if (!res.ok) {
+            console.log("Fetch error:", await res.text());
+            setOffline();
             return;
         }
 
+        const arr = await res.json();
+        console.log("JSON:", arr);
+
+        const data = arr[0];
+
+        if (!data) {
+            setOffline();
+            return;
+        }
+
+        // UI update
         document.getElementById("moisture").innerText = data.moisture_percent;
         document.getElementById("temperature").innerText = data.temperature_c;
         document.getElementById("pressure").innerText = data.pressure_hpa;
         document.getElementById("wifi").innerText = data.wifi_rssi;
 
-        document.getElementById("relayState").innerText = data.relay ? "Įjungta" : "Išjungta";
-        document.getElementById("lockdownState").innerText = data.lockdown ? "TAIP" : "NE";
+        document.getElementById("relayState").innerText =
+            data.relay ? "Įjungta" : "Išjungta";
+
+        document.getElementById("lockdownState").innerText =
+            data.lockdown ? "TAIP" : "NE";
 
         const usageBytes = data.usage_bytes || 0;
         const kb = usageBytes / 1024;
         const mb = kb / 1024;
+
         document.getElementById("usage").innerText =
             mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
 
-        document.getElementById("onlineStatus").innerText = "ONLINE";
-        document.getElementById("onlineStatus").style.color = "#00ff00";
+        setOnline();
 
+        // Relay button state
         const btn = document.getElementById("relayBtn");
         if (data.relay) {
             btn.innerText = "Išjungti";
@@ -60,16 +68,28 @@ async function fetchStatus() {
             btn.classList.remove("off");
         }
 
-    } catch (e) {
-        document.getElementById("onlineStatus").innerText = "OFFLINE";
-        document.getElementById("onlineStatus").style.color = "#ffcc33";
+    } catch (err) {
+        console.log("JS error:", err);
+        setOffline();
     }
+}
+
+function setOnline() {
+    const el = document.getElementById("onlineStatus");
+    el.innerText = "ONLINE";
+    el.style.color = "#00ff00";
+}
+
+function setOffline() {
+    const el = document.getElementById("onlineStatus");
+    el.innerText = "OFFLINE";
+    el.style.color = "#ffcc33";
 }
 
 async function sendRelayCommand(state) {
     await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
         method: "POST",
-        headers: sbHeaders({ Prefer: "return=minimal" }),
+        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ relay_state: state })
     });
 }
@@ -77,7 +97,7 @@ async function sendRelayCommand(state) {
 async function calibrateDry() {
     await fetch(`${SUPABASE_URL}/rest/v1/config`, {
         method: "PATCH",
-        headers: sbHeaders({ Prefer: "return=minimal" }),
+        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ dry_value: 800 })
     });
 }
@@ -85,7 +105,7 @@ async function calibrateDry() {
 async function calibrateWet() {
     await fetch(`${SUPABASE_URL}/rest/v1/config`, {
         method: "PATCH",
-        headers: sbHeaders({ Prefer: "return=minimal" }),
+        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ wet_value: 300 })
     });
 }
@@ -93,7 +113,7 @@ async function calibrateWet() {
 async function resetLockdown() {
     await fetch(`${SUPABASE_URL}/rest/v1/status`, {
         method: "PATCH",
-        headers: sbHeaders({ Prefer: "return=minimal" }),
+        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ lockdown: false })
     });
 }
@@ -101,7 +121,7 @@ async function resetLockdown() {
 async function resetUsage() {
     await fetch(`${SUPABASE_URL}/rest/v1/status`, {
         method: "PATCH",
-        headers: sbHeaders({ Prefer: "return=minimal" }),
+        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ usage_bytes: 0 })
     });
 
