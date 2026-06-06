@@ -1,6 +1,6 @@
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+    "TAVO_SUPABASE_KEY";
 
 function sbHeaders(extra = {}) {
     return {
@@ -10,9 +10,6 @@ function sbHeaders(extra = {}) {
     };
 }
 
-/* -------------------------------
-   GREITAS STATUS FETCH (kas 500ms)
---------------------------------*/
 async function fetchStatus() {
     try {
         const res = await fetch(
@@ -23,24 +20,15 @@ async function fetchStatus() {
         const arr = await res.json();
         const data = arr[0];
 
-        if (!data) {
-            setOffline();
-            return;
-        }
+        if (!data) return setOffline();
 
-        // --- ONLINE/OFFLINE ---
         const now = Date.now();
-        let ts = data.updated_at;
-        ts = ts.replace(/\.\d+/, "") + "Z";
+        let ts = data.updated_at.replace(/\.\d+/, "") + "Z";
         const updated = new Date(ts).getTime();
 
-        if (isNaN(updated) || now - updated > 5000) {
-            setOffline();
-        } else {
-            setOnline();
-        }
+        if (now - updated > 15000) setOffline();
+        else setOnline();
 
-        // --- UI ---
         document.getElementById("moisture").innerText = data.moisture_percent;
         document.getElementById("temperature").innerText = data.temperature_c;
         document.getElementById("pressure").innerText = data.pressure_hpa;
@@ -49,35 +37,11 @@ async function fetchStatus() {
         document.getElementById("relayState").innerText =
             data.relay ? "Įjungta" : "Išjungta";
 
-        document.getElementById("lockdownState").innerText =
-            data.lockdown ? "TAIP" : "NE";
-
-        const usageBytes = data.usage_bytes || 0;
-        const kb = usageBytes / 1024;
-        const mb = kb / 1024;
-
-        document.getElementById("usage").innerText =
-            mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
-
-        // Relay mygtukas
-        const btn = document.getElementById("relayBtn");
-        if (data.relay) {
-            btn.innerText = "Išjungti";
-            btn.classList.add("off");
-        } else {
-            btn.innerText = "Įjungti";
-            btn.classList.remove("off");
-        }
-
     } catch (err) {
-        console.log("JS error:", err);
         setOffline();
     }
 }
 
-/* -------------------------------
-   ONLINE / OFFLINE
---------------------------------*/
 function setOnline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "ONLINE";
@@ -90,93 +54,21 @@ function setOffline() {
     el.style.color = "#ffcc33";
 }
 
-/* -------------------------------
-   KOMANDOS — momentinis veikimas
---------------------------------*/
 async function sendRelayCommand(state) {
     await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
         method: "POST",
-        headers: sbHeaders({
-            "Content-Type": "application/json",
-            Prefer: "return=minimal"
-        }),
+        headers: sbHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ relay_state: state })
     });
-
-    // UI atsinaujina po 300ms
-    setTimeout(fetchStatus, 300);
 }
 
-async function calibrateDry() {
-    await fetch(`${SUPABASE_URL}/rest/v1/config?id=eq.1`, {
-        method: "PATCH",
-        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
-        body: JSON.stringify({ dry_value: 800 })
-    });
-}
-
-async function calibrateWet() {
-    await fetch(`${SUPABASE_URL}/rest/v1/config?id=eq.1`, {
-        method: "PATCH",
-        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
-        body: JSON.stringify({ wet_value: 300 })
-    });
-}
-
-async function resetLockdown() {
-    const latest = await fetch(
-        `${SUPABASE_URL}/rest/v1/status?select=id&order=id.desc&limit=1`,
-        { headers: sbHeaders() }
-    );
-    const arr = await latest.json();
-    const id = arr[0].id;
-
-    await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.${id}`, {
-        method: "PATCH",
-        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
-        body: JSON.stringify({ lockdown: false })
-    });
-}
-
-/* -------------------------------
-   RESET USAGE
---------------------------------*/
-async function resetUsage() {
-    const latest = await fetch(
-        `${SUPABASE_URL}/rest/v1/status?select=id&order=id.desc&limit=1`,
-        { headers: sbHeaders() }
-    );
-    const arr = await latest.json();
-    const id = arr[0].id;
-
-    await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.${id}`, {
-        method: "PATCH",
-        headers: sbHeaders({
-            "Content-Type": "application/json",
-            Prefer: "return=minimal"
-        }),
-        body: JSON.stringify({ usage_bytes: 0 })
-    });
-
-    document.getElementById("usage").innerText = "0 KB";
-}
-
-/* -------------------------------
-   STARTAS
---------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("relayBtn").addEventListener("click", async () => {
         const isOn = document.getElementById("relayBtn").classList.contains("off");
         await sendRelayCommand(isOn ? "off" : "on");
+        setTimeout(fetchStatus, 1000);
     });
 
-    document.getElementById("btnDry").addEventListener("click", calibrateDry);
-    document.getElementById("btnWet").addEventListener("click", calibrateWet);
-    document.getElementById("btnReset").addEventListener("click", resetLockdown);
-    document.getElementById("resetUsage").addEventListener("click", resetUsage);
-
     fetchStatus();
-
-    // GREITAS ATNAUJINIMAS — kas 500ms
-    setInterval(fetchStatus, 500);
+    setInterval(fetchStatus, 5000);
 });
