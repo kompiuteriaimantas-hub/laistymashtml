@@ -150,7 +150,7 @@ async function calibrateWet() {
 }
 
 async function resetLockdown() {
-    await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.1`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/status?order=id.desc&limit=1`, {
         method: "PATCH",
         headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ lockdown: false })
@@ -158,7 +158,7 @@ async function resetLockdown() {
 }
 
 async function resetUsage() {
-    await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.1`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/status?order=id.desc&limit=1`, {
         method: "PATCH",
         headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ usage_bytes: 0 })
