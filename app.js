@@ -150,7 +150,15 @@ async function calibrateWet() {
 }
 
 async function resetLockdown() {
-    await fetch(`${SUPABASE_URL}/rest/v1/status?order=id.desc&limit=1`, {
+    // PATAISYTA: PATCH su WHERE
+    const latest = await fetch(
+        `${SUPABASE_URL}/rest/v1/status?select=id&order=id.desc&limit=1`,
+        { headers: sbHeaders() }
+    );
+    const arr = await latest.json();
+    const id = arr[0].id;
+
+    await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.${id}`, {
         method: "PATCH",
         headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ lockdown: false })
@@ -158,12 +166,22 @@ async function resetLockdown() {
 }
 
 async function resetUsage() {
-    await fetch(`${SUPABASE_URL}/rest/v1/status?order=id.desc&limit=1`, {
+    // 1. Pasiimam naujausią ID
+    const latest = await fetch(
+        `${SUPABASE_URL}/rest/v1/status?select=id&order=id.desc&limit=1`,
+        { headers: sbHeaders() }
+    );
+    const arr = await latest.json();
+    const id = arr[0].id;
+
+    // 2. PATCH su WHERE (teisingas būdas)
+    await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.${id}`, {
         method: "PATCH",
         headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ usage_bytes: 0 })
     });
 
+    // 3. UI atnaujinimas
     document.getElementById("usage").innerText = "0 KB";
     updateMonthlyUsageUI();
 }
