@@ -25,6 +25,20 @@ async function fetchStatus() {
             return;
         }
 
+async function fetchMonthlyUsage() {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
+        { headers: sbHeaders() }
+    );
+
+    const arr = await res.json();
+    return arr;
+}
+
+
         // --- ONLINE/OFFLINE tikrinimas ---
         const now = Date.now();
 
