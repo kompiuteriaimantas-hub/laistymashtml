@@ -150,7 +150,6 @@ async function calibrateWet() {
 }
 
 async function resetLockdown() {
-    // PATAISYTA: PATCH su WHERE
     const latest = await fetch(
         `${SUPABASE_URL}/rest/v1/status?select=id&order=id.desc&limit=1`,
         { headers: sbHeaders() }
@@ -165,6 +164,9 @@ async function resetLockdown() {
     });
 }
 
+/* -------------------------------
+   RESET USAGE — PATAISYTA
+--------------------------------*/
 async function resetUsage() {
     // 1. Pasiimam naujausią ID
     const latest = await fetch(
@@ -177,7 +179,10 @@ async function resetUsage() {
     // 2. PATCH su WHERE (teisingas būdas)
     await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.${id}`, {
         method: "PATCH",
-        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
+        headers: sbHeaders({
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+        }),
         body: JSON.stringify({ usage_bytes: 0 })
     });
 
