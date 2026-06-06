@@ -2,80 +2,50 @@
 <html lang="lt">
 <head>
     <meta charset="UTF-8">
-    <title>Laistymo sistema</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Laistymo sistema — ALIEN UI</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header class="header">
-    <div>
-        <h1>🌱 Laistymo sistema</h1>
-        <div id="onlineStatus" class="status">Tikrinama...</div>
-    </div>
-
-    <div class="usage-box">
-        <span>Duomenų naudojimas:</span>
-        <span id="usage">-</span>
-        <button id="resetUsage" class="reset-btn">Reset</button>
-    </div>
+<header>
+    <h1>LAISTYMO SISTEMA</h1>
+    <span class="status online">ONLINE</span>
 </header>
 
-<main>
-
-    <!-- MĖNESIO ISTORIJA -->
-    <section class="monthly-section">
-        <h2>📅 Mėnesio duomenų istorija</h2>
-        <div id="monthlyUsage">Kraunama...</div>
-    </section>
-
-    <section class="cards">
-        <div class="card">
-            <h2>Drėgmė</h2>
-            <div class="value"><span id="moisture">-</span>%</div>
-            <div class="icon">💧</div>
+<section class="gauges">
+    <div class="gauge">
+        <div class="ring moisture">
+            <span id="moistureVal">2%</span>
         </div>
-
-        <div class="card">
-            <h2>Temperatūra</h2>
-            <div class="value"><span id="temperature">-</span>°C</div>
-            <div class="icon">🌡️</div>
-        </div>
-
-        <div class="card">
-            <h2>Slėgis</h2>
-            <div class="value"><span id="pressure">-</span> hPa</div>
-            <div class="icon">🧭</div>
-        </div>
-    </section>
-
-    <section class="relay-section">
-        <h2>🔆 Relė</h2>
-        <div class="relay-status">Būsena: <span id="relayState">-</span></div>
-
-        <button id="relayBtn" class="relay-btn">Įjungti</button>
-
-        <div class="relay-extra">
-            <span>Lockdown: <span id="lockdownState">-</span></span>
-            <span>WiFi: <span id="wifi">-</span> dBm</span>
-        </div>
-    </section>
-
-    <section class="calibration">
-    <h2>Kalibracija</h2>
-
-    <div class="cal-buttons">
-        <button class="btn dry" id="btnDry">SAUSA</button>
-        <button class="btn wet" id="btnWet">DRĖGNA</button>
+        <label>Drėgmė</label>
     </div>
-        
 
-        <h2>Sistemos valdymas</h2>
-        <button class="btn reset" id="btnReset">Atstatyti sistemą</button>
-    </section>
+    <div class="gauge">
+        <div class="ring temp">
+            <span id="tempVal">25.4°C</span>
+        </div>
+        <label>Temperatūra</label>
+    </div>
 
-</main>
+    <div class="gauge">
+        <div class="ring pressure">
+            <span id="pressureVal">1021 hPa</span>
+        </div>
+        <label>Slėgis</label>
+    </div>
+</section>
 
-<script src="app.js?v=999"></script>
+<section class="relay">
+    <h2>Relė</h2>
+    <p>Būsena: <span id="relayState">Išjungta</span></p>
+    <p>Lockdown: <span id="lockdownState">NE</span></p>
+    <button id="relayBtn" class="btn green">Įjungti</button>
+</section>
+
+<section class="system">
+    <h2>Sistemos valdymas</h2>
+    <button id="resetBtn" class="btn red">Atstatyti sistemą</button>
+</section>
+
 </body>
 </html>
