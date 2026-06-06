@@ -11,7 +11,7 @@ function sbHeaders(extra = {}) {
 }
 
 /* -------------------------------
-   MĖNESIO ISTORIJOS FUNKCIJA
+   MĖNESIO ISTORIJA
 --------------------------------*/
 async function fetchMonthlyUsage() {
     const now = new Date();
@@ -58,12 +58,11 @@ async function fetchStatus() {
             return;
         }
 
-        // --- ONLINE/OFFLINE tikrinimas ---
+        // --- ONLINE/OFFLINE ---
         const now = Date.now();
-
         let ts = data.updated_at;
-        ts = ts.replace(/\.\d+/, ""); // nukerpam mikrosekundes
-        ts = ts + "Z"; // pridedam laiko zoną
+        ts = ts.replace(/\.\d+/, "");
+        ts = ts + "Z";
 
         const updated = new Date(ts).getTime();
 
@@ -73,7 +72,7 @@ async function fetchStatus() {
             setOnline();
         }
 
-        // --- UI atnaujinimas ---
+        // --- UI ---
         document.getElementById("moisture").innerText = data.moisture_percent;
         document.getElementById("temperature").innerText = data.temperature_c;
         document.getElementById("pressure").innerText = data.pressure_hpa;
@@ -92,7 +91,7 @@ async function fetchStatus() {
         document.getElementById("usage").innerText =
             mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
 
-        // Relay mygtuko būsena
+        // Relay mygtukas
         const btn = document.getElementById("relayBtn");
         if (data.relay) {
             btn.innerText = "Išjungti";
@@ -135,7 +134,7 @@ async function sendRelayCommand(state) {
 }
 
 async function calibrateDry() {
-    await fetch(`${SUPABASE_URL}/rest/v1/config`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/config?id=eq.1`, {
         method: "PATCH",
         headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ dry_value: 800 })
@@ -143,7 +142,7 @@ async function calibrateDry() {
 }
 
 async function calibrateWet() {
-    await fetch(`${SUPABASE_URL}/rest/v1/config`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/config?id=eq.1`, {
         method: "PATCH",
         headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ wet_value: 300 })
@@ -151,7 +150,7 @@ async function calibrateWet() {
 }
 
 async function resetLockdown() {
-    await fetch(`${SUPABASE_URL}/rest/v1/status`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.1`, {
         method: "PATCH",
         headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ lockdown: false })
@@ -159,7 +158,7 @@ async function resetLockdown() {
 }
 
 async function resetUsage() {
-    await fetch(`${SUPABASE_URL}/rest/v1/status`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.1`, {
         method: "PATCH",
         headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
         body: JSON.stringify({ usage_bytes: 0 })
