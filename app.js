@@ -27,7 +27,8 @@ async function fetchStatus() {
 
         // Tikrinam ar ESP gyvas pagal updated_at
         const now = Date.now();
-        const updated = new Date(data.updated_at).getTime();
+        const updated = new Date(data.updated_at + "Z").getTime();
+
 
         if (isNaN(updated) || now - updated > 15000) {
             setOffline();
