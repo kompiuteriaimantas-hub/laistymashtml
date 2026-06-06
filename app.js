@@ -25,10 +25,19 @@ async function fetchStatus() {
             return;
         }
 
-        // Tikrinam ar ESP gyvas pagal updated_at
+        // --- ONLINE/OFFLINE tikrinimas ---
         const now = Date.now();
-        const updated = new Date(data.updated_at + "Z").getTime();
 
+        // Normalizuojam timestamp (Supabase grąžina be laiko zonos ir su mikrosekundėmis)
+        let ts = data.updated_at;
+
+        // Pašalinam mikrosekundes (.11875 → .118)
+        ts = ts.replace(/\.\d+/, "");
+
+        // Pridedam Z, kad JS suprastų kaip UTC
+        ts = ts + "Z";
+
+        const updated = new Date(ts).getTime();
 
         if (isNaN(updated) || now - updated > 15000) {
             setOffline();
@@ -36,7 +45,7 @@ async function fetchStatus() {
             setOnline();
         }
 
-        // UI update
+        // --- UI atnaujinimas ---
         document.getElementById("moisture").innerText = data.moisture_percent;
         document.getElementById("temperature").innerText = data.temperature_c;
         document.getElementById("pressure").innerText = data.pressure_hpa;
@@ -55,7 +64,7 @@ async function fetchStatus() {
         document.getElementById("usage").innerText =
             mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
 
-        // Relay button state
+        // Relay mygtuko būsena
         const btn = document.getElementById("relayBtn");
         if (data.relay) {
             btn.innerText = "Išjungti";
