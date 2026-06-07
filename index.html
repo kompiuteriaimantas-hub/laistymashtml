@@ -7,9 +7,11 @@
 
 <link rel="stylesheet" href="style.css">
 
-<!-- Gauges -->
-<script src="https://cdn.jsdelivr.net/npm/canvas-gauges/gauge.min.js
+<!-- ✅ GAUGES SCRIPT (FIXED) -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-gauges/gauge.min.js"></script>
+
 </head>
+
 <body>
 
 <header class="header">
@@ -43,7 +45,7 @@
 
 <div class="gauge">
     <canvas id="pressureGauge"></canvas>
-    <div class="small"><span id="pressure">-</span></div>
+    <div class="small"><span id="pressure">-</span> hPa</div>
 </div>
 
 </section>
@@ -68,10 +70,9 @@
 
 </main>
 
-
+<!-- ✅ TVARKINGI SCRIPT -->
 <script src="gauges.js"></script>
 <script src="app.js?v=999"></script>
-
 
 </body>
 </html>
