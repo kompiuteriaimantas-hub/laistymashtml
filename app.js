@@ -155,17 +155,27 @@ async function fetchStatus() {
 /* -------------------------------
    ONLINE / OFFLINE
 --------------------------------*/
+
 function setOnline() {
   const el = document.getElementById("onlineStatus");
+  const led = document.getElementById("onlineLed");
+
   el.innerText = "ONLINE";
-  el.style.color = "#00ff00";
+  el.style.color = "#00ff88";
+
+  led.classList.remove("off");
 }
 
 function setOffline() {
   const el = document.getElementById("onlineStatus");
+  const led = document.getElementById("onlineLed");
+
   el.innerText = "OFFLINE";
-  el.style.color = "#ffcc33";
+  el.style.color = "orange";
+
+  led.classList.add("off");
 }
+
 
 /* -------------------------------
    COMMANDS
