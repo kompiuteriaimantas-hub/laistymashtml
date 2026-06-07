@@ -65,6 +65,18 @@ async function fetchMonthlyUsage() {
   return await res.json();
 }
 
+async function fetchHistory() {
+  const now = new Date();
+  const past = new Date(now.getTime() - (48 * 60 * 60 * 1000)).toISOString();
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/status?updated_at=gte.${past}&select=*`,
+    { headers: sbHeaders() }
+  );
+
+  return await res.json();
+}
+
 async function updateMonthlyUsageUI() {
   const data = await fetchMonthlyUsage();
 
