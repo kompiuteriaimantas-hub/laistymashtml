@@ -39,9 +39,89 @@ body::after {
 }
 
 /* ✅ header */
-header {
+/* 🔹 HEADER */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
     padding: 20px;
 }
+
+/* 🔹 LEFT SIDE */
+.header-left {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 🔹 STATUS ROW */
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+/* 🔹 LED */
+.led {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #00ff88;
+
+    box-shadow: 0 0 10px #00ff88;
+}
+
+/* 🔹 OFFLINE (bus naudojamas JS) */
+.led.off {
+    background: orange;
+    box-shadow: 0 0 10px orange;
+}
+
+/* 🔹 STATUS TEXT */
+.status {
+    font-size: 14px;
+    color: #00ff88;
+    font-weight: bold;
+}
+
+/* 🔹 USAGE BOX (HUD style) */
+.usage-box {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    min-width: 160px;
+}
+
+.usage-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+}
+
+/* 🔹 PROGRESS BAR */
+.usage-bar {
+    height: 6px;
+    background: #222;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#usageFill {
+    height: 100%;
+    width: 30%;
+    background: linear-gradient(90deg, #00ff88, #22c55e);
+}
+
+/* 🔹 BUTTON */
+.reset-btn {
+    padding: 6px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
 
 /* ✅ CARDS GRID */
 .cards {
