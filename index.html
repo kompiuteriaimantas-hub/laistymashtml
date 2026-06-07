@@ -9,6 +9,9 @@
 
     <!-- ✅ GAUGES -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-gauges/gauge.min.js"></script>
+
+    <!-- ✅ CHART -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -47,49 +50,42 @@
         <div id="monthlyUsage">Kraunama...</div>
     </section>
 
-    <!-- ✅ CARDS SU GAUGES -->
+    <!-- GAUGES -->
     <section class="cards">
 
-        <!-- DRĖGMĖ -->
         <div class="card">
             <h2>Drėgmė</h2>
-
             <canvas id="moistureGauge"></canvas>
-
-            <!-- ID PALIEKAM -->
             <div class="value">
                 <span id="moisture">-</span>%
             </div>
-
             <div class="icon">💧</div>
         </div>
 
-        <!-- TEMP -->
         <div class="card">
             <h2>Temperatūra</h2>
-
             <canvas id="tempGauge"></canvas>
-
             <div class="value">
                 <span id="temperature">-</span>°C
             </div>
-
             <div class="icon">🌡️</div>
         </div>
 
-        <!-- PRESSURE -->
         <div class="card">
             <h2>Slėgis</h2>
-
             <canvas id="pressureGauge"></canvas>
-
             <div class="value">
                 <span id="pressure">-</span> hPa
             </div>
-
             <div class="icon">🧭</div>
         </div>
 
+    </section>
+
+    <!-- ✅ HISTORY CHART -->
+    <section class="chart-section">
+        <h2>📈 Istorija (48h)</h2>
+        <canvas id="historyChart"></canvas>
     </section>
 
     <!-- RELAY -->
@@ -120,7 +116,7 @@
 
 </main>
 
-<!-- ✅ TAVO ORIGINALUS JS -->
+<!-- ✅ APP -->
 <script src="app.js"></script>
 
 </body>
