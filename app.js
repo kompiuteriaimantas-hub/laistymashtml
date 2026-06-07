@@ -1,6 +1,6 @@
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY =
-"eyJhbGciOiJIUzI1NiIsInT5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
 function sbHeaders(extra = {}) {
   return {
@@ -247,28 +247,11 @@ function setOffline() {
 }
 
 /* -------------------------------
-   COMMANDS
---------------------------------*/
-async function sendRelayCommand(state) {
-  await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
-    method: "POST",
-    headers: sbHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ relay_state: state })
-  });
-}
-
-/* -------------------------------
    START
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
 
   initGauges();
-
-  document.getElementById("relayBtn").addEventListener("click", async () => {
-    const isOn = document.getElementById("relayBtn").classList.contains("off");
-    await sendRelayCommand(isOn ? "off" : "on");
-    setTimeout(fetchStatus, 1000);
-  });
 
   fetchStatus();
   updateMonthlyUsageUI();
