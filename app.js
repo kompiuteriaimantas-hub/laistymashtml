@@ -1,6 +1,6 @@
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+"eyJhbGciOiJIUzI1NiIsInT5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
 function sbHeaders(extra = {}) {
   return {
@@ -51,7 +51,7 @@ function initGauges() {
 }
 
 /* -------------------------------
-   HISTORY
+   HISTORY (48h)
 --------------------------------*/
 async function fetchHistory() {
   const now = new Date();
@@ -135,12 +135,8 @@ async function updateChart() {
         }
       },
       scales: {
-        x: {
-          ticks: { color: "white" }
-        },
-        y: {
-          ticks: { color: "white" }
-        }
+        x: { ticks: { color: "white" } },
+        y: { ticks: { color: "white" } }
       }
     }
   });
@@ -219,3 +215,66 @@ async function fetchStatus() {
 
     const usageBytes = data.usage_bytes || 0;
     const kb = usageBytes / 1024;
+    const mb = kb / 1024;
+
+    document.getElementById("usage").innerText =
+      mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
+
+    const percent = Math.min((mb / 5) * 100, 100);
+    document.getElementById("usageFill").style.width = percent + "%";
+
+    if (moistureGauge) moistureGauge.value = Number(data.moisture_percent) || 0;
+    if (tempGauge) tempGauge.value = Number(data.temperature_c) || 0;
+    if (pressureGauge) pressureGauge.value = Number(data.pressure_hpa) || 0;
+
+  } catch (err) {
+    console.log("JS error:", err);
+    setOffline();
+  }
+}
+
+/* -------------------------------
+   ONLINE / OFFLINE
+--------------------------------*/
+function setOnline() {
+  document.getElementById("onlineStatus").innerText = "ONLINE";
+  document.getElementById("onlineLed").classList.remove("off");
+}
+
+function setOffline() {
+  document.getElementById("onlineStatus").innerText = "OFFLINE";
+  document.getElementById("onlineLed").classList.add("off");
+}
+
+/* -------------------------------
+   COMMANDS
+--------------------------------*/
+async function sendRelayCommand(state) {
+  await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
+    method: "POST",
+    headers: sbHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ relay_state: state })
+  });
+}
+
+/* -------------------------------
+   START
+--------------------------------*/
+window.addEventListener("DOMContentLoaded", () => {
+
+  initGauges();
+
+  document.getElementById("relayBtn").addEventListener("click", async () => {
+    const isOn = document.getElementById("relayBtn").classList.contains("off");
+    await sendRelayCommand(isOn ? "off" : "on");
+    setTimeout(fetchStatus, 1000);
+  });
+
+  fetchStatus();
+  updateMonthlyUsageUI();
+  updateChart();
+
+  setInterval(fetchStatus, 2000);
+  setInterval(updateMonthlyUsageUI, 60000);
+  setInterval(updateChart, 60000);
+});
