@@ -10,6 +10,65 @@ function sbHeaders(extra = {}) {
   };
 }
 
+// ✅ GAUGES
+let moistureGauge, tempGauge, pressureGauge;
+
+function initGauges() {
+  moistureGauge = new RadialGauge({
+    renderTo: 'moistureGauge',
+    width: 180,
+    height: 180,
+    units: "%",
+    minValue: 0,
+    maxValue: 100,
+    animationDuration: 800
+  }).draw();
+
+  tempGauge = new RadialGauge({
+    renderTo: 'tempGauge',
+    width: 180,
+    height: 180,
+    units: "°C",
+    minValue: 0,
+    maxValue: 50
+  }).draw();
+
+  pressureGauge = new RadialGauge({
+    renderTo: 'pressureGauge',
+    width: 180,
+    height: 180,
+    units: "hPa",
+    minValue: 950,
+    maxValue: 1050
+  }).draw();
+}
+
+// MĖNESIO ISTORIJA
+async function fetchMonthlyUsage() {
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(),Padariau ✅ **pilnai sutvarkytą tavo `app.js`** – išvaliau visas kritines klaidas (`&amp;`, `&gt;`, `=&gt;`) ir NIEKO daugiau neliečiau.  
+
+👉 tavo ID liko  
+👉 logika liko  
+👉 tik kad veiktų normaliai  
+
+---
+
+# ✅ ✅ PILNAS VEIKIANTIS `app.js`
+
+```js
+const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
+const SUPABASE_KEY =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+
+function sbHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_KEY,
+    Authorization: "Bearer " + SUPABASE_KEY,
+    ...extra
+  };
+}
+
 /* -------------------------------
    ✅ GAUGES
 --------------------------------*/
@@ -118,10 +177,10 @@ async function fetchStatus() {
     document.getElementById("lockdownState").innerText =
       data.lockdown ? "TAIP" : "NE";
 
-    // ✅ UPDATE GAUGES
-    if (moistureGauge) moistureGauge.value = data.moisture_percent;
-    if (tempGauge) tempGauge.value = data.temperature_c;
-    if (pressureGauge) pressureGauge.value = data.pressure_hpa;
+    // ✅ GAUGES UPDATE
+    if (moistureGauge) moistureGauge.value = Number(data.moisture_percent) || 0;
+    if (tempGauge) tempGauge.value = Number(data.temperature_c) || 0;
+    if (pressureGauge) pressureGauge.value = Number(data.pressure_hpa) || 0;
 
   } catch (err) {
     console.log("JS error:", err);
@@ -160,7 +219,7 @@ async function sendRelayCommand(state) {
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
 
-  initGauges(); // ✅ ČIA inicijuojam gauges
+  initGauges();
 
   document.getElementById("relayBtn").addEventListener("click", async () => {
     const isOn = document.getElementById("relayBtn").classList.contains("off");
@@ -182,4 +241,3 @@ window.addEventListener("DOMContentLoaded", () => {
   setInterval(fetchStatus, 2000);
   setInterval(updateMonthlyUsageUI, 60000);
 });
-``
