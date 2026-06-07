@@ -103,10 +103,18 @@ async function updateChart() {
   const raw = await fetchHistory();
   const data = groupByHour(raw);
 
-  const labels = data.map(r => {
-    const d = new Date(r.updated_at);
-    return d.getHours() + ":00";
+  
+
+onst labels = data.map(r => {
+  const d = new Date(r.updated_at);
+  return d.toLocaleString("lt-LT", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
   });
+});
+
 
   const moisture = data.map(r => r.moisture_percent);
   const temp = data.map(r => r.temperature_c);
