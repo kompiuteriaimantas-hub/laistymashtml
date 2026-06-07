@@ -156,7 +156,7 @@ async function resetLockdown() {
             "Content-Type": "application/json",
             Prefer: "return=minimal"
         }),
-        body: JSON.stringify({ reset_lockdown: true })
+        body: JSON.stringify({ reset_lockdown:true })
     });
 }
 
