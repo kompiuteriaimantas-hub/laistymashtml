@@ -1,50 +1,61 @@
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
-const SUPABASE_KEY =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+const SUPABASE_KEY = "PASTE_KEY";
 
-function sbHeaders(extra = {}) {
+function sbHeaders() {
   return {
     apikey: SUPABASE_KEY,
-    Authorization: "Bearer " + SUPABASE_KEY,
-    ...extra
+    Authorization: "Bearer " + SUPABASE_KEY
   };
 }
 
-/* -------------------------------
-   GAUGES
---------------------------------*/
+/* GAUGES */
 let moistureGauge, tempGauge, pressureGauge;
 
 function initGauges() {
   moistureGauge = new RadialGauge({
     renderTo: 'moistureGauge',
-    width: 180,
-    height: 180,
-    units: "%",
     minValue: 0,
     maxValue: 100
   }).draw();
 
   tempGauge = new RadialGauge({
     renderTo: 'tempGauge',
-    units: "°C",
     minValue: -10,
-    maxValue: 40,
-    majorTicks: ["-10","0","10","20","30","40"]
+    maxValue: 40
   }).draw();
 
   pressureGauge = new RadialGauge({
     renderTo: 'pressureGauge',
-    units: "hPa",
     minValue: 500,
-    maxValue: 1600,
-    majorTicks: ["500","700","900","1100","1300","1500"]
+    maxValue: 1600
   }).draw();
 }
 
-/* -------------------------------
-   HISTORY
---------------------------------*/
+/* FETCH STATUS */
+async function fetchStatus() {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/status?select=*&order=id.desc&limit=1`,
+    { headers: sbHeaders() }
+  );
+
+  const data = (await res.json())[0];
+
+  if (!data) return;
+
+  document.getElementById("moisture").innerText = data.moisture_percent;
+  document.getElementById("temperature").innerText = data.temperature_c;
+  document.getElementById("pressure").innerText = data.pressure_hpa;
+
+  moistureGauge.value = data.moisture_percent;
+  tempGauge.value = data.temperature_c;
+  pressureGauge.value = data.pressure_hpa;
+
+  // usage
+  const kb = data.usage_bytes / 1024;
+  document.getElementById("usage").innerText = kb.toFixed(1) + " KB";
+}
+
+/* HISTORY */
 async function fetchHistory() {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/status?select=*&limit=200`,
@@ -55,39 +66,15 @@ async function fetchHistory() {
 
 function groupByHour(data) {
   const map = {};
-
   data.forEach(row => {
     const d = new Date(row.updated_at);
-
-    const key =
-      d.getFullYear() + "-" +
-      (d.getMonth() + 1) + "-" +
-      d.getDate() + " " +
-      d.getHours() + ":00";
-
+    const key = d.getHours() + ":00";
     if (!map[key]) map[key] = row;
   });
-
   return Object.values(map);
 }
 
-/* -------------------------------
-   CHARTS
---------------------------------*/
 let moistureChart, tempChart, pressureChart;
-
-function chartOptions() {
-  return {
-    responsive: true,
-    plugins: {
-      legend: { labels: { color: "white" } }
-    },
-    scales: {
-      x: { ticks: { color: "white" } },
-      y: { ticks: { color: "white" } }
-    }
-  };
-}
 
 async function updateChart() {
   const raw = await fetchHistory();
@@ -95,83 +82,36 @@ async function updateChart() {
 
   const labels = data.map(r => {
     const d = new Date(r.updated_at);
-    return d.toLocaleString("lt-LT", {
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    return d.getHours() + ":00";
   });
 
   const moisture = data.map(r => r.moisture_percent);
   const temp = data.map(r => r.temperature_c);
   const pressure = data.map(r => r.pressure_hpa);
 
-  // 💧
-  const ctx1 = document.getElementById("moistureChart").getContext("2d");
   if (moistureChart) moistureChart.destroy();
-
-  moistureChart = new Chart(ctx1, {
-    type: "line",
-    data: { labels, datasets: [{ data: moisture, borderColor: "#22c55e" }] },
-    options: chartOptions()
-  });
-
-  // 🌡️
-  const ctx2 = document.getElementById("tempChart").getContext("2d");
   if (tempChart) tempChart.destroy();
-
-  tempChart = new Chart(ctx2, {
-    type: "line",
-    data: { labels, datasets: [{ data: temp, borderColor: "#f97316" }] },
-    options: chartOptions()
-  });
-
-  // 🧭
-  const ctx3 = document.getElementById("pressureChart").getContext("2d");
   if (pressureChart) pressureChart.destroy();
 
-  pressureChart = new Chart(ctx3, {
+  moistureChart = new Chart(document.getElementById("moistureChart"), {
     type: "line",
-    data: { labels, datasets: [{ data: pressure, borderColor: "#3b82f6" }] },
-    options: chartOptions()
+    data: { labels, datasets: [{ data: moisture, borderColor: "green" }] }
+  });
+
+  tempChart = new Chart(document.getElementById("tempChart"), {
+    type: "line",
+    data: { labels, datasets: [{ data: temp, borderColor: "orange" }] }
+  });
+
+  pressureChart = new Chart(document.getElementById("pressureChart"), {
+    type: "line",
+    data: { labels, datasets: [{ data: pressure, borderColor: "blue" }] }
   });
 }
 
-/* -------------------------------
-   STATUS
---------------------------------*/
-async function fetchStatus() {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/status?select=*&order=id.desc&limit=1`,
-      { headers: sbHeaders() }
-    );
-
-    const arr = await res.json();
-    const data = arr[0];
-
-    if (!data) return;
-
-    document.getElementById("moisture").innerText = data.moisture_percent;
-    document.getElementById("temperature").innerText = data.temperature_c;
-    document.getElementById("pressure").innerText = data.pressure_hpa;
-
-    if (moistureGauge) moistureGauge.value = data.moisture_percent;
-    if (tempGauge) tempGauge.value = data.temperature_c;
-    if (pressureGauge) pressureGauge.value = data.pressure_hpa;
-
-  } catch (err) {
-    console.log(err);
-  }
-}
-
-/* -------------------------------
-   START
---------------------------------*/
+/* START */
 window.addEventListener("DOMContentLoaded", () => {
-
   initGauges();
-
   fetchStatus();
   updateChart();
 
