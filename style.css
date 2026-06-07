@@ -30,9 +30,11 @@ body::before {
 
 
 
+
 .chart-section {
-    padding: 20px;
+    margin: 20px;
 }
+
 
 #historyChart {
     width: 100%;
