@@ -150,10 +150,15 @@ async function calibrateWet() {
 }
 
 async function resetLockdown() {
-    const latest = await fetch(
-        `${SUPABASE_URL}/rest/v1/status?select=id&order=id.desc&limit=1`,
-        { headers: sbHeaders() }
-    );
+    await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
+        method: "POST",
+        headers: sbHeaders({
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+        }),
+        body: JSON.stringify({ reset_lockdown: true })
+    });
+}
     const arr = await latest.json();
     const id = arr[0].id;
 
