@@ -28,6 +28,20 @@ body::before {
     z-index: -2;
 }
 
+
+
+.chart-section {
+    padding: 20px;
+}
+
+#historyChart {
+    width: 100%;
+    max-height: 300px;
+}
+
+
+
+
 /* ✅ glow overlay (Giger vibe) */
 body::after {
     content: "";
