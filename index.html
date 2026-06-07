@@ -14,16 +14,29 @@
 <body>
 
 <header class="header">
-    <div>
+
+    <div class="header-left">
         <h1>🌱 Laistymo sistema</h1>
-        <div id="onlineStatus" class="status">Tikrinama...</div>
+
+        <div class="status-row">
+            <span id="onlineLed" class="led"></span>
+            <span id="onlineStatus" class="status">ONLINE</span>
+        </div>
     </div>
 
     <div class="usage-box">
-        <span>Duomenų naudojimas:</span>
-        <span id="usage">-</span>
+        <div class="usage-text">
+            <span>Duomenų naudojimas</span>
+            <span id="usage">-</span>
+        </div>
+
+        <div class="usage-bar">
+            <div id="usageFill"></div>
+        </div>
+
         <button id="resetUsage" class="reset-btn">Reset</button>
     </div>
+
 </header>
 
 <main>
