@@ -25,23 +25,27 @@ function initGauges() {
     maxValue: 100
   }).draw();
 
-  tempGauge = new RadialGauge({
-    renderTo: 'tempGauge',
-    width: 180,
-    height: 180,
-    units: "°C",
-    minValue: 0,
-    maxValue: 50
-  }).draw();
+  
+tempGauge = new RadialGauge({
+  renderTo: 'tempGauge',
+  width: 180,
+  height: 180,
+  units: "°C",
+  minValue: -10,
+  maxValue: 40
+}).draw();
 
-  pressureGauge = new RadialGauge({
-    renderTo: 'pressureGauge',
-    width: 180,
-    height: 180,
-    units: "hPa",
-    minValue: 950,
-    maxValue: 1050
-  }).draw();
+
+  
+pressureGauge = new RadialGauge({
+  renderTo: 'pressureGauge',
+  width: 180,
+  height: 180,
+  units: "hPa",
+  minValue: 500,
+  maxValue: 1600
+}).draw();
+
 }
 
 /* -------------------------------
