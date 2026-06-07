@@ -11,7 +11,7 @@ function sbHeaders(extra = {}) {
 }
 
 /* -------------------------------
-   ✅ GAUGES
+   GAUGES
 --------------------------------*/
 let moistureGauge, tempGauge, pressureGauge;
 
@@ -25,47 +25,29 @@ function initGauges() {
     maxValue: 100
   }).draw();
 
-  
+  tempGauge = new RadialGauge({
+    renderTo: 'tempGauge',
+    width: 180,
+    height: 180,
+    units: "°C",
+    minValue: -10,
+    maxValue: 40,
+    majorTicks: ["-10","0","10","20","30","40"],
+    minorTicks: 2,
+    strokeTicks: true
+  }).draw();
 
-tempGauge = new RadialGauge({
-  renderTo: 'tempGauge',
-  width: 180,
-  height: 180,
-  units: "°C",
-
-  minValue: -10,
-  maxValue: 40,
-
-  majorTicks: ["-10","0","10","20","30","40"],
-  minorTicks: 2,
-  strokeTicks: true,
-
-  animationDuration: 800
-}).draw();
-
-
-
-  
-pressureGauge = new RadialGauge({
-  renderTo: 'pressureGauge',
-  width: 180,
-  height: 180,
-  units: "hPa",
-
-  minValue: 500,
-  maxValue: 1600,
-
-  majorTicks: ["500","700","900","1100","1300","1500"],
-  minorTicks: 2,
-  strokeTicks: true,
-
-  highlights: [
-    { from: 500, to: 900, color: "orange" },
-    { from: 900, to: 1100, color: "green" },
-    { from: 1100, to: 1600, color: "blue" }
-  ]
-}).draw();
-
+  pressureGauge = new RadialGauge({
+    renderTo: 'pressureGauge',
+    width: 180,
+    height: 180,
+    units: "hPa",
+    minValue: 500,
+    maxValue: 1600,
+    majorTicks: ["500","700","900","1100","1300","1500"],
+    minorTicks: 2,
+    strokeTicks: true
+  }).draw();
 }
 
 /* -------------------------------
@@ -116,7 +98,7 @@ async function fetchStatus() {
       return;
     }
 
-    // ONLINE / OFFLINE CHECK
+    // ONLINE CHECK
     const now = Date.now();
     let ts = data.updated_at;
     ts = ts.replace(/\.\d+/, "") + "Z";
@@ -129,7 +111,7 @@ async function fetchStatus() {
       setOnline();
     }
 
-    // --- UI ---
+    // UI TEXT
     document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
     document.getElementById("temperature").innerText = data.temperature_c ?? "-";
     document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
@@ -140,6 +122,17 @@ async function fetchStatus() {
 
     document.getElementById("lockdownState").innerText =
       data.lockdown ? "TAIP" : "NE";
+
+    // ✅ USAGE
+    const usageBytes = data.usage_bytes || 0;
+    const kb = usageBytes / 1024;
+    const mb = kb / 1024;
+
+    document.getElementById("usage").innerText =
+      mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
+
+    const percent = Math.min((mb / 5) * 100, 100);
+    document.getElementById("usageFill").style.width = percent + "%";
 
     // ✅ GAUGES
     if (moistureGauge) moistureGauge.value = Number(data.moisture_percent) || 0;
@@ -155,7 +148,6 @@ async function fetchStatus() {
 /* -------------------------------
    ONLINE / OFFLINE
 --------------------------------*/
-
 function setOnline() {
   const el = document.getElementById("onlineStatus");
   const led = document.getElementById("onlineLed");
@@ -176,7 +168,6 @@ function setOffline() {
   led.classList.add("off");
 }
 
-
 /* -------------------------------
    COMMANDS
 --------------------------------*/
@@ -196,7 +187,6 @@ async function sendRelayCommand(state) {
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
 
-  // ✅ INIT
   initGauges();
 
   document.getElementById("relayBtn").addEventListener("click", async () => {
@@ -213,10 +203,10 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // ✅ KICKSTART
   fetchStatus();
   updateMonthlyUsageUI();
 
   setInterval(fetchStatus, 2000);
   setInterval(updateMonthlyUsageUI, 60000);
 });
+``
