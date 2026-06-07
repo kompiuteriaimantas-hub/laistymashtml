@@ -51,6 +51,102 @@ function initGauges() {
 }
 
 /* -------------------------------
+   HISTORY
+--------------------------------*/
+async function fetchHistory() {
+  const now = new Date();
+  const past = new Date(now.getTime() - (48 * 60 * 60 * 1000)).toISOString();
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/status?updated_at=gte.${past}&select=*`,
+    { headers: sbHeaders() }
+  );
+
+  return await res.json();
+}
+
+function groupByHour(data) {
+  const map = {};
+
+  data.forEach(row => {
+    const d = new Date(row.updated_at);
+
+    const key =
+      d.getFullYear() + "-" +
+      (d.getMonth() + 1) + "-" +
+      d.getDate() + " " +
+      d.getHours() + ":00";
+
+    if (!map[key]) map[key] = row;
+  });
+
+  return Object.values(map);
+}
+
+let chart;
+
+async function updateChart() {
+  const raw = await fetchHistory();
+  const data = groupByHour(raw);
+
+  const labels = data.map(r => {
+    const d = new Date(r.updated_at);
+    return d.getHours() + ":00";
+  });
+
+  const moisture = data.map(r => r.moisture_percent);
+  const temp = data.map(r => r.temperature_c);
+  const pressure = data.map(r => r.pressure_hpa);
+
+  const ctx = document.getElementById("historyChart").getContext("2d");
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Drėgmė",
+          data: moisture,
+          borderColor: "#22c55e",
+          tension: 0.3
+        },
+        {
+          label: "Temp",
+          data: temp,
+          borderColor: "#f97316",
+          tension: 0.3
+        },
+        {
+          label: "Slėgis",
+          data: pressure,
+          borderColor: "#3b82f6",
+          tension: 0.3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { color: "white" }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: "white" }
+        },
+        y: {
+          ticks: { color: "white" }
+        }
+      }
+    }
+  });
+}
+
+/* -------------------------------
    MĖNESIO ISTORIJA
 --------------------------------*/
 async function fetchMonthlyUsage() {
@@ -59,18 +155,6 @@ async function fetchMonthlyUsage() {
 
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
-    { headers: sbHeaders() }
-  );
-
-  return await res.json();
-}
-
-async function fetchHistory() {
-  const now = new Date();
-  const past = new Date(now.getTime() - (48 * 60 * 60 * 1000)).toISOString();
-
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/status?updated_at=gte.${past}&select=*`,
     { headers: sbHeaders() }
   );
 
@@ -110,7 +194,6 @@ async function fetchStatus() {
       return;
     }
 
-    // ONLINE CHECK
     const now = Date.now();
     let ts = data.updated_at;
     ts = ts.replace(/\.\d+/, "") + "Z";
@@ -123,7 +206,6 @@ async function fetchStatus() {
       setOnline();
     }
 
-    // UI TEXT
     document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
     document.getElementById("temperature").innerText = data.temperature_c ?? "-";
     document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
@@ -135,90 +217,5 @@ async function fetchStatus() {
     document.getElementById("lockdownState").innerText =
       data.lockdown ? "TAIP" : "NE";
 
-    // ✅ USAGE
     const usageBytes = data.usage_bytes || 0;
     const kb = usageBytes / 1024;
-    const mb = kb / 1024;
-
-    document.getElementById("usage").innerText =
-      mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
-
-    const percent = Math.min((mb / 5) * 100, 100);
-    document.getElementById("usageFill").style.width = percent + "%";
-
-    // ✅ GAUGES
-    if (moistureGauge) moistureGauge.value = Number(data.moisture_percent) || 0;
-    if (tempGauge) tempGauge.value = Number(data.temperature_c) || 0;
-    if (pressureGauge) pressureGauge.value = Number(data.pressure_hpa) || 0;
-
-  } catch (err) {
-    console.log("JS error:", err);
-    setOffline();
-  }
-}
-
-/* -------------------------------
-   ONLINE / OFFLINE
---------------------------------*/
-function setOnline() {
-  const el = document.getElementById("onlineStatus");
-  const led = document.getElementById("onlineLed");
-
-  el.innerText = "ONLINE";
-  el.style.color = "#00ff88";
-
-  led.classList.remove("off");
-}
-
-function setOffline() {
-  const el = document.getElementById("onlineStatus");
-  const led = document.getElementById("onlineLed");
-
-  el.innerText = "OFFLINE";
-  el.style.color = "orange";
-
-  led.classList.add("off");
-}
-
-/* -------------------------------
-   COMMANDS
---------------------------------*/
-async function sendRelayCommand(state) {
-  await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
-    method: "POST",
-    headers: sbHeaders({
-      "Content-Type": "application/json",
-      Prefer: "return=minimal"
-    }),
-    body: JSON.stringify({ relay_state: state })
-  });
-}
-
-/* -------------------------------
-   START
---------------------------------*/
-window.addEventListener("DOMContentLoaded", () => {
-
-  initGauges();
-
-  document.getElementById("relayBtn").addEventListener("click", async () => {
-    const isOn = document.getElementById("relayBtn").classList.contains("off");
-    await sendRelayCommand(isOn ? "off" : "on");
-    setTimeout(fetchStatus, 1000);
-  });
-
-  document.getElementById("btnReset").addEventListener("click", async () => {
-    await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
-      method: "POST",
-      headers: sbHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ reset_lockdown: true })
-    });
-  });
-
-  fetchStatus();
-  updateMonthlyUsageUI();
-
-  setInterval(fetchStatus, 2000);
-  setInterval(updateMonthlyUsageUI, 60000);
-});
-``
