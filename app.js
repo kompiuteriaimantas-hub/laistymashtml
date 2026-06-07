@@ -159,6 +159,9 @@ async function resetLockdown() {
         body: JSON.stringify({ reset_lockdown: true })
     });
 }
+        body: JSON.stringify({ reset_lockdown: true })
+    });
+}
     const arr = await latest.json();
     const id = arr[0].id;
 
