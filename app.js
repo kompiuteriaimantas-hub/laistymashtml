@@ -48,8 +48,8 @@ tempGauge = new RadialGauge({
   
 pressureGauge = new RadialGauge({
   renderTo: 'pressureGauge',
-  width: 90,
-  height: 90,
+  width: 180,
+  height: 180,
   units: "hPa",
 
   minValue: 500,
