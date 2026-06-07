@@ -1,177 +1,214 @@
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
 function sbHeaders(extra = {}) {
-  return {
-    apikey: SUPABASE_KEY,
-    Authorization: "Bearer " + SUPABASE_KEY,
-    ...extra
-  };
+    return {
+        apikey: SUPABASE_KEY,
+        Authorization: "Bearer " + SUPABASE_KEY,
+        ...extra
+    };
 }
 
 /* -------------------------------
-   GAUGES
+   MĖNESIO ISTORIJA
 --------------------------------*/
-let moistureGauge, tempGauge, pressureGauge;
+async function fetchMonthlyUsage() {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-function initGauges() {
-  moistureGauge = new RadialGauge({
-    renderTo: 'moistureGauge',
-    width: 180,
-    height: 180,
-    units: "%",
-    minValue: 0,
-    maxValue: 100
-  }).draw();
-
-  tempGauge = new RadialGauge({
-    renderTo: 'tempGauge',
-    units: "°C",
-    minValue: -10,
-    maxValue: 40,
-    majorTicks: ["-10","0","10","20","30","40"]
-  }).draw();
-
-  pressureGauge = new RadialGauge({
-    renderTo: 'pressureGauge',
-    units: "hPa",
-    minValue: 500,
-    maxValue: 1600,
-    majorTicks: ["500","700","900","1100","1300","1500"]
-  }).draw();
-}
-
-/* -------------------------------
-   HISTORY
---------------------------------*/
-async function fetchHistory() {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/status?select=*&limit=200`,
-    { headers: sbHeaders() }
-  );
-  return await res.json();
-}
-
-function groupByHour(data) {
-  const map = {};
-
-  data.forEach(row => {
-    if (!row.updated_at) return;
-
-    const d = new Date(row.updated_at);
-    const key = d.getHours() + ":00";
-
-    if (!map[key]) map[key] = row;
-  });
-
-  return Object.values(map);
-}
-
-/* -------------------------------
-   CHARTS
---------------------------------*/
-let moistureChart, tempChart, pressureChart;
-
-function chartOptions() {
-  return {
-    responsive: true,
-    plugins: {
-      legend: { labels: { color: "white" } }
-    },
-    scales: {
-      x: { ticks: { color: "white" } },
-      y: { ticks: { color: "white" } }
-    }
-  };
-}
-
-async function updateChart() {
-  const raw = await fetchHistory();
-  const data = groupByHour(raw);
-
-  const labels = data.map(r => {
-    const d = new Date(r.updated_at);
-    return d.getHours() + ":00";
-  });
-
-  const moisture = data.map(r => r.moisture_percent || 0);
-  const temp = data.map(r => r.temperature_c || 0);
-  const pressure = data.map(r => r.pressure_hpa || 0);
-
-  // 💧
-  if (moistureChart) moistureChart.destroy();
-  moistureChart = new Chart(document.getElementById("moistureChart"), {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{ label: "Drėgmė", data: moisture, borderColor: "#22c55e" }]
-    },
-    options: chartOptions()
-  });
-
-  // 🌡️
-  if (tempChart) tempChart.destroy();
-  tempChart = new Chart(document.getElementById("tempChart"), {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{ label: "Temp", data: temp, borderColor: "#f97316" }]
-    },
-    options: chartOptions()
-  });
-
-  // 🧭
-  if (pressureChart) pressureChart.destroy();
-  pressureChart = new Chart(document.getElementById("pressureChart"), {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{ label: "Slėgis", data: pressure, borderColor: "#3b82f6" }]
-    },
-    options: chartOptions()
-  });
-}
-
-/* -------------------------------
-   STATUS
---------------------------------*/
-async function fetchStatus() {
-  try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/status?select=*&order=id.desc&limit=1`,
-      { headers: sbHeaders() }
+        `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
+        { headers: sbHeaders() }
     );
 
-    const arr = await res.json();
-    const data = arr[0];
+    return await res.json();
+}
 
-    if (!data) return;
+async function updateMonthlyUsageUI() {
+    const data = await fetchMonthlyUsage();
 
-    document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
-    document.getElementById("temperature").innerText = data.temperature_c ?? "-";
-    document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
+    let total = 0;
+    for (const row of data) total += row.usage_bytes;
 
-    if (moistureGauge) moistureGauge.value = data.moisture_percent || 0;
-    if (tempGauge) tempGauge.value = data.temperature_c || 0;
-    if (pressureGauge) pressureGauge.value = data.pressure_hpa || 0;
+    const kb = total / 1024;
+    const mb = kb / 1024;
 
-  } catch (err) {
-    console.log("ERROR:", err);
-  }
+    document.getElementById("monthlyUsage").innerText =
+        mb >= 1
+            ? `Šio mėnesio sunaudota: ${mb.toFixed(2)} MB`
+            : `Šio mėnesio sunaudota: ${kb.toFixed(1)} KB`;
 }
 
 /* -------------------------------
-   START
+   STATUSO FUNKCIJA
+--------------------------------*/
+async function fetchStatus() {
+    try {
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/status?select=*&order=id.desc&limit=1`,
+            { headers: sbHeaders() }
+        );
+
+        const arr = await res.json();
+        const data = arr[0];
+
+        if (!data) {
+            setOffline();
+            return;
+        }
+
+        // --- ONLINE/OFFLINE ---
+        const now = Date.now();
+        let ts = data.updated_at;
+        ts = ts.replace(/\.\d+/, "");
+        ts = ts + "Z";
+
+        const updated = new Date(ts).getTime();
+
+        if (isNaN(updated) || now - updated > 15000) {
+            setOffline();
+        } else {
+            setOnline();
+        }
+
+        // --- UI ---
+        document.getElementById("moisture").innerText = data.moisture_percent;
+        document.getElementById("temperature").innerText = data.temperature_c;
+        document.getElementById("pressure").innerText = data.pressure_hpa;
+        document.getElementById("wifi").innerText = data.wifi_rssi;
+
+        document.getElementById("relayState").innerText =
+            data.relay ? "Įjungta" : "Išjungta";
+
+        document.getElementById("lockdownState").innerText =
+            data.lockdown ? "TAIP" : "NE";
+
+        const usageBytes = data.usage_bytes || 0;
+        const kb = usageBytes / 1024;
+        const mb = kb / 1024;
+
+        document.getElementById("usage").innerText =
+            mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
+
+        // Relay mygtukas
+        const btn = document.getElementById("relayBtn");
+        if (data.relay) {
+            btn.innerText = "Išjungti";
+            btn.classList.add("off");
+        } else {
+            btn.innerText = "Įjungti";
+            btn.classList.remove("off");
+        }
+
+    } catch (err) {
+        console.log("JS error:", err);
+        setOffline();
+    }
+}
+
+/* -------------------------------
+   BŪSENOS FUNKCIJOS
+--------------------------------*/
+function setOnline() {
+    const el = document.getElementById("onlineStatus");
+    el.innerText = "ONLINE";
+    el.style.color = "#00ff00";
+}
+
+function setOffline() {
+    const el = document.getElementById("onlineStatus");
+    el.innerText = "OFFLINE";
+    el.style.color = "#ffcc33";
+}
+
+/* -------------------------------
+   KOMANDOS
+--------------------------------*/
+async function sendRelayCommand(state) {
+    await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
+        method: "POST",
+        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
+        body: JSON.stringify({ relay_state: state })
+    });
+}
+
+async function calibrateDry() {
+    await fetch(`${SUPABASE_URL}/rest/v1/config?id=eq.1`, {
+        method: "PATCH",
+        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
+        body: JSON.stringify({ dry_value: 800 })
+    });
+}
+
+async function calibrateWet() {
+    await fetch(`${SUPABASE_URL}/rest/v1/config?id=eq.1`, {
+        method: "PATCH",
+        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
+        body: JSON.stringify({ wet_value: 300 })
+    });
+}
+
+async function resetLockdown() {
+    const latest = await fetch(
+        `${SUPABASE_URL}/rest/v1/status?select=id&order=id.desc&limit=1`,
+        { headers: sbHeaders() }
+    );
+    const arr = await latest.json();
+    const id = arr[0].id;
+
+    await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.${id}`, {
+        method: "PATCH",
+        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
+        body: JSON.stringify({ lockdown: false })
+    });
+}
+
+/* -------------------------------
+   RESET USAGE — PATAISYTA
+--------------------------------*/
+async function resetUsage() {
+    // 1. Pasiimam naujausią ID
+    const latest = await fetch(
+        `${SUPABASE_URL}/rest/v1/status?select=id&order=id.desc&limit=1`,
+        { headers: sbHeaders() }
+    );
+    const arr = await latest.json();
+    const id = arr[0].id;
+
+    // 2. PATCH su WHERE (teisingas būdas)
+    await fetch(`${SUPABASE_URL}/rest/v1/status?id=eq.${id}`, {
+        method: "PATCH",
+        headers: sbHeaders({
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+        }),
+        body: JSON.stringify({ usage_bytes: 0 })
+    });
+
+    // 3. UI atnaujinimas
+    document.getElementById("usage").innerText = "0 KB";
+    updateMonthlyUsageUI();
+}
+
+/* -------------------------------
+   STARTAS
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("relayBtn").addEventListener("click", async () => {
+        const isOn = document.getElementById("relayBtn").classList.contains("off");
+        await sendRelayCommand(isOn ? "off" : "on");
+        setTimeout(fetchStatus, 1000);
+    });
 
-  initGauges();
+    document.getElementById("btnDry").addEventListener("click", calibrateDry);
+    document.getElementById("btnWet").addEventListener("click", calibrateWet);
+    document.getElementById("btnReset").addEventListener("click", resetLockdown);
+    document.getElementById("resetUsage").addEventListener("click", resetUsage);
 
-  fetchStatus();
-  updateChart();
+    fetchStatus();
+    updateMonthlyUsageUI();
 
-  setInterval(fetchStatus, 2000);
-  setInterval(updateChart, 60000);
+    setInterval(fetchStatus, 1000);
+    setInterval(updateMonthlyUsageUI, 60000);
 });
-``
