@@ -26,14 +26,23 @@ function initGauges() {
   }).draw();
 
   
+
 tempGauge = new RadialGauge({
   renderTo: 'tempGauge',
-  width: 180,
-  height: 180,
+  width: 90,
+  height: 90,
   units: "°C",
+
   minValue: -10,
-  maxValue: 40
+  maxValue: 40,
+
+  majorTicks: ["-10","0","10","20","30","40"],
+  minorTicks: 2,
+  strokeTicks: true,
+
+  animationDuration: 800
 }).draw();
+
 
 
   
