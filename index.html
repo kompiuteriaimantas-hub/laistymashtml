@@ -17,7 +17,12 @@
     <div class="usage-box">
         <span>Duomenų naudojimas:</span>
         <span id="usage">-</span>
+
+        <!-- Esamas mygtukas -->
         <button id="resetUsage" class="reset-btn">Reset</button>
+
+        <!-- 🔥 Naujas mėnesio reset mygtukas -->
+        <button id="resetMonth" class="reset-btn">Mėnesio reset</button>
     </div>
 </header>
 
@@ -62,13 +67,12 @@
     </section>
 
     <section class="calibration">
-    <h2>Kalibracija</h2>
+        <h2>Kalibracija</h2>
 
-    <div class="cal-buttons">
-        <button class="btn dry" id="btnDry">SAUSA</button>
-        <button class="btn wet" id="btnWet">DRĖGNA</button>
-    </div>
-        
+        <div class="cal-buttons">
+            <button class="btn dry" id="btnDry">SAUSA</button>
+            <button class="btn wet" id="btnWet">DRĖGNA</button>
+        </div>
 
         <h2>Sistemos valdymas</h2>
         <button class="btn reset" id="btnReset">Atstatyti sistemą</button>
@@ -77,5 +81,26 @@
 </main>
 
 <script src="app.js?v=999"></script>
+
+<!-- 🔥 Nauja funkcija mėnesio reset komandai -->
+<script>
+document.getElementById("resetMonth").addEventListener("click", () => {
+    fetch("https://wbueugwhngtgtifuasvm.supabase.co/rest/v1/commands", {
+        method: "POST",
+        headers: {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI",
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({
+            reset_month: true
+        })
+    });
+
+    alert("Mėnesio duomenų reset komanda išsiųsta!");
+});
+</script>
+
 </body>
 </html>
