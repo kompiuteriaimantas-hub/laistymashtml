@@ -1,77 +1,149 @@
 <!DOCTYPE html>
 <html lang="lt">
 <head>
-<meta charset="UTF-8">
-<title>Laistymo sistema</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>Laistymo sistema</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css">
 
-<!-- ✅ GAUGES SCRIPT (FIXED) -->
-<script src="https://cdn.jsdelivr.net/npm/canvas-gauges/gauge.min.js"></script>
-
+    <!-- ✅ GAUGES -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-gauges/gauge.min.js"></script>
 </head>
 
 <body>
 
 <header class="header">
-    <h1>🌱 Laistymo sistema</h1>
-    <div id="onlineStatus" class="status">Tikrinama...</div>
+    <div>
+        <h1>🌱 Laistymo sistema</h1>
+        <div id="onlineStatus" class="status">Tikrinama...</div>
+    </div>
 
     <div class="usage-box">
+        <span>Duomenų naudojimas:</span>
         <span id="usage">-</span>
-        <button id="resetUsage">Reset</button>
+        <button id="resetUsage" class="reset-btn">Reset</button>
     </div>
 </header>
 
 <main>
 
-<section class="monthly">
-    <h2>Mėnesio istorija</h2>
-    <div id="monthlyUsage">Kraunama...</div>
-</section>
+    <!-- MĖNESIO ISTORIJA -->
+    <section class="monthly-section">
+        <h2>📅 Mėnesio duomenų istorija</h2>
+        <div id="monthlyUsage">Kraunama...</div>
+    </section>
 
-<section class="gauges">
+    <!-- ✅ CARDS SU GAUGES -->
+    <section class="cards">
 
-<div class="gauge">
-    <canvas id="moistureGauge"></canvas>
-    <div class="small"><span id="moisture">-</span>%</div>
-</div>
+        <!-- DRĖGMĖ -->
+        <div class="card">
+            <h2>Drėgmė</h2>
 
-<div class="gauge">
-    <canvas id="tempGauge"></canvas>
-    <div class="small"><span id="temperature">-</span>°C</div>
-</div>
+            <canvas id="moistureGauge"></canvas>
 
-<div class="gauge">
-    <canvas id="pressureGauge"></canvas>
-    <div class="small"><span id="pressure">-</span> hPa</div>
-</div>
+            <!-- ID PALIEKAM -->
+            <div class="value">
+                <span id="moisture">-</span>%
+            </div>
 
-</section>
+            <div class="icon">💧</div>
+        </div>
 
-<section class="relay">
-    <h2>Relė</h2>
-    <div>Būsena: <span id="relayState">-</span></div>
+        <!-- TEMP -->
+        <div class="card">
+            <h2>Temperatūra</h2>
 
-    <button id="relayBtn">Įjungti</button>
+            <canvas id="tempGauge"></canvas>
 
-    <div>
-        Lockdown: <span id="lockdownState">-</span> |
-        WiFi: <span id="wifi">-</span>
-    </div>
-</section>
+            <div class="value">
+                <span id="temperature">-</span>°C
+            </div>
 
-<section class="calibration">
-    <button id="btnDry">SAUSA</button>
-    <button id="btnWet">DRĖGNA</button>
-    <button id="btnReset">Atstatyti sistemą</button>
-</section>
+            <div class="icon">🌡️</div>
+        </div>
+
+        <!-- PRESSURE -->
+        <div class="card">
+            <h2>Slėgis</h2>
+
+            <canvas id="pressureGauge"></canvas>
+
+            <div class="value">
+                <span id="pressure">-</span> hPa
+            </div>
+
+            <div class="icon">🧭</div>
+        </div>
+
+    </section>
+
+    <!-- RELAY -->
+    <section class="relay-section">
+        <h2>🔆 Relė</h2>
+        <div class="relay-status">Būsena: <span id="relayState">-</span></div>
+
+        <button id="relayBtn" class="relay-btn">Įjungti</button>
+
+        <div class="relay-extra">
+            <span>Lockdown: <span id="lockdownState">-</span></span>
+            <span>WiFi: <span id="wifi">-</span> dBm</span>
+        </div>
+    </section>
+
+    <!-- CALIBRATION -->
+    <section class="calibration">
+        <h2>Kalibracija</h2>
+
+        <div class="cal-buttons">
+            <button class="btn dry" id="btnDry">SAUSA</button>
+            <button class="btn wet" id="btnWet">DRĖGNA</button>
+        </div>
+
+        <h2>Sistemos valdymas</h2>
+        <button class="btn reset" id="btnReset">Atstatyti sistemą</button>
+    </section>
 
 </main>
 
-<!-- ✅ TVARKINGI SCRIPT -->
-<script src="gauges.js"></script>
+<!-- ✅ GAUGES INIT -->
+<script>
+let moistureGauge, tempGauge, pressureGauge;
+
+window.addEventListener("DOMContentLoaded", () => {
+
+    moistureGauge = new RadialGauge({
+        renderTo: 'moistureGauge',
+        width: 180,
+        height: 180,
+        units: "%",
+        minValue: 0,
+        maxValue: 100
+    }).draw();
+
+    tempGauge = new RadialGauge({
+        renderTo: 'tempGauge',
+        width: 180,
+        height: 180,
+        units: "°C",
+        minValue: 0,
+        maxValue: 50
+    }).draw();
+
+    pressureGauge = new RadialGauge({
+        renderTo: 'pressureGauge',
+        width: 180,
+        height: 180,
+        units: "hPa",
+        minValue: 950,
+        maxValue: 1050
+    }).draw();
+
+});
+</script>
+
+<!-- ✅ TAVO ORIGINALUS JS -->
 <script src="app.js?v=999"></script>
 
 </body>
