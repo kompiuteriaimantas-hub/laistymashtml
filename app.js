@@ -48,11 +48,22 @@ tempGauge = new RadialGauge({
   
 pressureGauge = new RadialGauge({
   renderTo: 'pressureGauge',
-  width: 180,
-  height: 180,
+  width: 90,
+  height: 90,
   units: "hPa",
+
   minValue: 500,
-  maxValue: 1600
+  maxValue: 1600,
+
+  majorTicks: ["500","700","900","1100","1300","1500"],
+  minorTicks: 2,
+  strokeTicks: true,
+
+  highlights: [
+    { from: 500, to: 900, color: "orange" },
+    { from: 900, to: 1100, color: "green" },
+    { from: 1100, to: 1600, color: "blue" }
+  ]
 }).draw();
 
 }
