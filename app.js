@@ -29,8 +29,8 @@ function initGauges() {
 
 tempGauge = new RadialGauge({
   renderTo: 'tempGauge',
-  width: 90,
-  height: 90,
+  width: 180,
+  height: 180,
   units: "°C",
 
   minValue: -10,
