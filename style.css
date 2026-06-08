@@ -84,7 +84,7 @@ main {
 .card {
     position: relative;
     padding: 14px;
-    padding-right: 70px; /* vieta gauge */
+    padding-right: 90px; /* vieta gauge */
 
     min-height: 90px;
 
