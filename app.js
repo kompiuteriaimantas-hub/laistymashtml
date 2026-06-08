@@ -61,12 +61,10 @@ async function fetchMonthlyUsage() {
 }
 
 async function updateMonthlyUsageUI() {
-    const data = await fetchMonthlyUsage();
+    const el = document.getElementById("monthlyUsage");
+    if (!el) return;
 
-    if (!data || !Array.isArray(data)) {
-        document.getElementById("monthlyUsage").innerText = "Šio mėnesio sunaudota: 0 KB";
-        return;
-    }
+    const data = await fetchMonthlyUsage();
 
     let total = 0;
     for (const row of data) {
@@ -76,7 +74,7 @@ async function updateMonthlyUsageUI() {
     const kb = total / 1024;
     const mb = kb / 1024;
 
-    document.getElementById("monthlyUsage").innerText =
+    el.innerText =
         mb >= 1
             ? `Šio mėnesio sunaudota: ${mb.toFixed(2)} MB`
             : `Šio mėnesio sunaudota: ${kb.toFixed(1)} KB`;
@@ -99,7 +97,6 @@ async function fetchStatus() {
 
         const now = Date.now();
 
-        // ✅ FIX – svarbiausia dalis (nebebus OFFLINE bug)
         const updated = new Date(
             data.updated_at.replace(/\.\d+/, "") + "Z"
         ).getTime();
@@ -119,29 +116,28 @@ async function fetchStatus() {
             wifiEl.innerText = `${rssi} dBm (${getWifiLabel(rssi)})`;
             wifiEl.style.color = getWifiColor(rssi);
         }
-// ✅ DUOMENŲ NAUDOJIMAS (dabartinis)
-const usageEl = document.getElementById("usage");
 
-if (usageEl) {
-    const usageBytes = Number(data.usage_bytes);
+        // ✅ DUOMENŲ NAUDOJIMAS
+        const usageEl = document.getElementById("usage");
+        if (usageEl) {
+            const usageBytes = Number(data.usage_bytes);
 
-    if (!isNaN(usageBytes)) {
-        const kb = usageBytes / 1024;
-        const mb = kb / 1024;
+            if (!isNaN(usageBytes)) {
+                const kb = usageBytes / 1024;
+                const mb = kb / 1024;
 
-        usageEl.innerText =
-            mb >= 1
-                ? mb.toFixed(2) + " MB"
-                : kb.toFixed(1) + " KB";
-    } else {
-        usageEl.innerText = "-";
-    }
-}
+                usageEl.innerText =
+                    mb >= 1
+                        ? mb.toFixed(2) + " MB"
+                        : kb.toFixed(1) + " KB";
+            } else {
+                usageEl.innerText = "-";
+            }
+        }
 
-        
         // ✅ LOCKDOWN
-        document.getElementById("lockdownState").innerText =
-            data.lockdown ? "TAIP" : "NE";
+        const lockEl = document.getElementById("lockdownState");
+        if (lockEl) lockEl.innerText = data.lockdown ? "TAIP" : "NE";
 
         // ✅ RELAY
         const btn = document.getElementById("relayBtn");
@@ -159,8 +155,10 @@ if (usageEl) {
             }
         }
 
-        // ✅ STATUS TEXT
+        // ✅ STATUS (ONLINE/OFFLINE)
         const el = document.getElementById("onlineStatus");
+
+        if (!el) return;
 
         if (data.lockdown) {
             el.innerText = "LOCKDOWN";
@@ -202,7 +200,7 @@ async function resetLockdown() {
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
 
-    document.getElementById("relayBtn").addEventListener("click", async () => {
+    document.getElementById("relayBtn")?.addEventListener("click", async () => {
         const btn = document.getElementById("relayBtn");
         const isOn = btn.classList.contains("active");
 
