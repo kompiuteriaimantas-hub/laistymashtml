@@ -12,7 +12,7 @@ function sbHeaders(extra = {}) {
 }
 
 /* -------------------------------
-   🔥 GAUGE (STABILUS)
+   🔥 SIMPLE GAUGE (be bugų)
 --------------------------------*/
 let gaugeMoisture, gaugeTemp, gaugePressure;
 
@@ -22,8 +22,8 @@ function createGauge(canvasId, min, max) {
 
     const opts = {
         angle: 0,
-        lineWidth: 0.14,
-        radiusScale: 0.9,
+        lineWidth: 0.15,
+        radiusScale: 0.95,
 
         pointer: {
             length: 0.5,
@@ -31,16 +31,9 @@ function createGauge(canvasId, min, max) {
             color: "#ffffff"
         },
 
-        staticZones: [
-            { strokeStyle: "#3a8ed8", min: min, max: max * 0.7 },
-            { strokeStyle: "#666", min: max * 0.7, max: max }
-        ],
-
-        staticLabels: {
-            font: "7px sans-serif",
-            labels: [min, Math.round((min + max) / 2), max],
-            color: "#ccc"
-        }
+        colorStart: "#3a8ed8",
+        colorStop: "#6c757d",
+        strokeColor: "#333"
     };
 
     const gauge = new Gauge(target).setOptions(opts);
@@ -103,17 +96,38 @@ async function fetchStatus() {
         let ts = data.updated_at.replace(/\.\d+/, "") + "Z";
         const updated = new Date(ts).getTime();
 
-        if (isNaN(updated) || now - updated > 60000) {
+        // ✅ STABILUS ONLINE (nebemirgės)
+        if (isNaN(updated) || now - updated > 120000) {
             setOffline();
         } else {
             setOnline();
         }
 
-        document.getElementById("moisture").innerText = data.moisture_percent;
-        document.getElementById("temperature").innerText = data.temperature_c;
-        document.getElementById("pressure").innerText = data.pressure_hpa;
+        // ✅ SENSORIAI
+        document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
+        document.getElementById("temperature").innerText = data.temperature_c ?? "-";
+        document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
 
-        // ✅ GAUGES UPDATE
+        // ✅ WIFI
+        const wifiEl = document.getElementById("wifi");
+        if (wifiEl) wifiEl.innerText = data.wifi_rssi ?? "-";
+
+        // ✅ LOCKDOWN
+        const lockEl = document.getElementById("lockdownState");
+        if (lockEl) lockEl.innerText = data.lockdown ? "TAIP" : "NE";
+
+        // ✅ USAGE
+        const usageBytes = data.usage_bytes || 0;
+        const kb = usageBytes / 1024;
+        const mb = kb / 1024;
+
+        const usageEl = document.getElementById("usage");
+        if (usageEl) {
+            usageEl.innerText =
+                mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
+        }
+
+        // ✅ GAUGE UPDATE
         if (gaugeMoisture) gaugeMoisture.set(data.moisture_percent);
         if (gaugeTemp) gaugeTemp.set(data.temperature_c);
         if (gaugePressure) gaugePressure.set(data.pressure_hpa);
@@ -138,6 +152,7 @@ function setOffline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "OFFLINE";
     el.style.color = "#ffcc33";
+    el.style.textShadow = "0 0 6px rgba(255,204,51,0.5)";
 }
 
 /* -------------------------------
@@ -152,6 +167,6 @@ window.addEventListener("DOMContentLoaded", () => {
     fetchStatus();
     updateMonthlyUsageUI();
 
-    setInterval(fetchStatus, 1500);
+    setInterval(fetchStatus, 2000);   // ✅ mažiau apkrauna + stabiliau
     setInterval(updateMonthlyUsageUI, 60000);
 });
