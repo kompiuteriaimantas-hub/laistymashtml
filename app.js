@@ -97,7 +97,7 @@ async function fetchStatus() {
             isOffline = true;
         }
 
-        // ✅ VISADA rodom paskutinius duomenis
+        // VISADA rodom paskutinius duomenis
         document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
         document.getElementById("temperature").innerText = data.temperature_c ?? "-";
         document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
@@ -118,7 +118,7 @@ async function fetchStatus() {
                 mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
         }
 
-        // ✅ RELAY
+        // RELAY
         const btn = document.getElementById("relayBtn");
         const relayStateEl = document.getElementById("relayState");
 
@@ -136,15 +136,17 @@ async function fetchStatus() {
             }
         }
 
-        // ✅ ONLINE / LOCKDOWN
+        // -------------------------------
+        //   🔥 TEISINGA PRIORITETŲ TVARKA
+        // -------------------------------
         const el = document.getElementById("onlineStatus");
 
-        if (data.lockdown) {
+        if (isOffline) {
+            setOffline();
+        } else if (data.lockdown) {
             el.innerText = "LOCKDOWN";
             el.style.color = "#ff4444";
             el.style.textShadow = "0 0 10px #ff4444";
-        } else if (isOffline) {
-            setOffline();
         } else {
             setOnline(diff);
         }
@@ -204,7 +206,7 @@ async function resetLockdown() {
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
 
-    // ✅ RELAY
+    // RELAY
     document.getElementById("relayBtn").addEventListener("click", async () => {
         const btn = document.getElementById("relayBtn");
         const isOn = btn.classList.contains("active");
@@ -218,7 +220,7 @@ window.addEventListener("DOMContentLoaded", () => {
         setTimeout(fetchStatus, 1500);
     });
 
-    // ✅ RESET BUTTON
+    // RESET BUTTON
     const resetBtn = document.getElementById("btnReset");
 
     if (resetBtn) {
