@@ -3,17 +3,16 @@ const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY =
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSIsImV4cCI6MjA5NjI1MjU4Nn0";
 
-/* ✅ Svarbiausia – BE Authorization */
+/* ✅ CRITICAL FIX – reikia ABU header */
 function sbHeaders(extra = {}) {
     return {
         apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
         ...extra
     };
 }
 
-/* -------------------------------
-   WIFI
---------------------------------*/
+/* WIFI */
 function getWifiLabel(rssi) {
     if (rssi >= -55) return "puikus";
     if (rssi >= -65) return "labai geras";
@@ -29,9 +28,7 @@ function getWifiColor(rssi) {
     return "#ff4444";
 }
 
-/* -------------------------------
-   ONLINE FORMAT
---------------------------------*/
+/* ONLINE */
 function formatLastSeen(ms) {
     const s = Math.floor(ms / 1000);
     const m = Math.floor(s / 60);
@@ -42,24 +39,20 @@ function formatLastSeen(ms) {
     return `Online prieš ${h} val`;
 }
 
-/* -------------------------------
-   MĖNESIO ISTORIJA
---------------------------------*/
+/* MONTH */
 async function fetchMonthlyUsage() {
-    try {
-        const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-        const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
-            { headers: sbHeaders() }
-        );
+    const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
+        {
+            headers: sbHeaders(),
+            redirect: "follow"
+        }
+    );
 
-        return await res.json();
-    } catch (e) {
-        console.log("Monthly error:", e);
-        return [];
-    }
+    return await res.json();
 }
 
 async function updateMonthlyUsageUI() {
@@ -69,9 +62,7 @@ async function updateMonthlyUsageUI() {
     const data = await fetchMonthlyUsage();
 
     let total = 0;
-    for (const row of data) {
-        total += row.usage_bytes || 0;
-    }
+    for (const row of data) total += row.usage_bytes || 0;
 
     const kb = total / 1024;
     const mb = kb / 1024;
@@ -82,31 +73,34 @@ async function updateMonthlyUsageUI() {
             : `Šio mėnesio sunaudota: ${kb.toFixed(1)} KB`;
 }
 
-/* -------------------------------
-   STATUS
---------------------------------*/
+/* STATUS */
 async function fetchStatus() {
     try {
         const res = await fetch(
             `${SUPABASE_URL}/rest/v1/status?select=*&order=id.desc&limit=1`,
-            { headers: sbHeaders() }
+            {
+                headers: sbHeaders(),
+                redirect: "follow"
+            }
         );
 
         const arr = await res.json();
         const data = arr[0];
         if (!data) return;
 
-        const now = Date.now();
-        const updated = new Date(data.updated_at.replace(/\.\d+/, "") + "Z").getTime();
-        const diff = now - updated;
+        const updated = new Date(
+            data.updated_at.replace(/\.\d+/, "") + "Z"
+        ).getTime();
+
+        const diff = Date.now() - updated;
         const isOffline = diff > 120000;
 
-        // SENSORIAI
+        /* SENSORIAI */
         document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
         document.getElementById("temperature").innerText = data.temperature_c ?? "-";
         document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
 
-        // WIFI
+        /* WIFI */
         const wifiEl = document.getElementById("wifi");
         if (wifiEl && data.wifi_rssi != null) {
             const rssi = data.wifi_rssi;
@@ -114,7 +108,7 @@ async function fetchStatus() {
             wifiEl.style.color = getWifiColor(rssi);
         }
 
-        // ✅ DUOMENŲ NAUDOJIMAS
+        /* USAGE */
         const usageEl = document.getElementById("usage");
         if (usageEl) {
             const usageBytes = Number(data.usage_bytes);
@@ -132,11 +126,11 @@ async function fetchStatus() {
             }
         }
 
-        // LOCKDOWN
-        const lockEl = document.getElementById("lockdownState");
-        if (lockEl) lockEl.innerText = data.lockdown ? "TAIP" : "NE";
+        /* LOCKDOWN */
+        document.getElementById("lockdownState").innerText =
+            data.lockdown ? "TAIP" : "NE";
 
-        // RELAY
+        /* RELAY */
         const btn = document.getElementById("relayBtn");
         const stateEl = document.getElementById("relayState");
 
@@ -152,10 +146,8 @@ async function fetchStatus() {
             }
         }
 
-        // ONLINE STATUS
+        /* ONLINE */
         const el = document.getElementById("onlineStatus");
-
-        if (!el) return;
 
         if (data.lockdown) {
             el.innerText = "LOCKDOWN";
@@ -173,9 +165,7 @@ async function fetchStatus() {
     }
 }
 
-/* -------------------------------
-   COMMANDS
---------------------------------*/
+/* COMMANDS */
 async function sendRelayCommand(state) {
     await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
         method: "POST",
@@ -192,9 +182,7 @@ async function resetLockdown() {
     });
 }
 
-/* -------------------------------
-   START
---------------------------------*/
+/* START */
 window.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("relayBtn")?.addEventListener("click", async () => {
@@ -203,24 +191,20 @@ window.addEventListener("DOMContentLoaded", () => {
 
         btn.innerText = "...";
         await sendRelayCommand(isOn ? "off" : "on");
-
         setTimeout(fetchStatus, 1000);
     });
 
-    const resetBtn = document.getElementById("btnReset");
+    document.getElementById("btnReset")?.addEventListener("click", async () => {
+        const btn = document.getElementById("btnReset");
 
-    if (resetBtn) {
-        resetBtn.addEventListener("click", async () => {
-            resetBtn.innerText = "...";
+        btn.innerText = "...";
+        await resetLockdown();
 
-            await resetLockdown();
-
-            setTimeout(() => {
-                fetchStatus();
-                resetBtn.innerText = "Atstatyti sistemą";
-            }, 2000);
-        });
-    }
+        setTimeout(() => {
+            fetchStatus();
+            btn.innerText = "Atstatyti sistemą";
+        }, 2000);
+    });
 
     fetchStatus();
     updateMonthlyUsageUI();
