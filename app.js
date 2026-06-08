@@ -12,7 +12,7 @@ function sbHeaders(extra = {}) {
 }
 
 /* -------------------------------
-   🔥 SIMPLE GAUGE (be bugų)
+   🔥 GAUGES
 --------------------------------*/
 let gaugeMoisture, gaugeTemp, gaugePressure;
 
@@ -45,33 +45,16 @@ function createGauge(canvasId, min, max) {
 }
 
 /* -------------------------------
-   MĖNESIO ISTORIJA
+   🕒 ONLINE TIME FORMAT
 --------------------------------*/
-async function fetchMonthlyUsage() {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+function formatLastSeen(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
 
-    const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
-        { headers: sbHeaders() }
-    );
-
-    return await res.json();
-}
-
-async function updateMonthlyUsageUI() {
-    const data = await fetchMonthlyUsage();
-
-    let total = 0;
-    for (const row of data) total += row.usage_bytes;
-
-    const kb = total / 1024;
-    const mb = kb / 1024;
-
-    document.getElementById("monthlyUsage").innerText =
-        mb >= 1
-            ? `Šio mėnesio sunaudota: ${mb.toFixed(2)} MB`
-            : `Šio mėnesio sunaudota: ${kb.toFixed(1)} KB`;
+    if (s < 60) return `Online prieš ${s}s`;
+    if (m < 60) return `Online prieš ${m} min`;
+    return `Online prieš ${h} val`;
 }
 
 /* -------------------------------
@@ -96,11 +79,12 @@ async function fetchStatus() {
         let ts = data.updated_at.replace(/\.\d+/, "") + "Z";
         const updated = new Date(ts).getTime();
 
-        // ✅ STABILUS ONLINE (nebemirgės)
-        if (isNaN(updated) || now - updated > 120000) {
+        const diff = now - updated;
+
+        if (isNaN(updated) || diff > 120000) {
             setOffline();
         } else {
-            setOnline();
+            setOnline(diff);
         }
 
         // ✅ SENSORIAI
@@ -127,7 +111,25 @@ async function fetchStatus() {
                 mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
         }
 
-        // ✅ GAUGE UPDATE
+        // ✅ RELAY
+        const btn = document.getElementById("relayBtn");
+        const relayStateEl = document.getElementById("relayState");
+
+        if (btn && relayStateEl) {
+            if (data.relay) {
+                btn.innerText = "Išjungti";
+                btn.classList.add("active");
+                btn.classList.remove("off");
+                relayStateEl.innerText = "Įjungta";
+            } else {
+                btn.innerText = "Įjungti";
+                btn.classList.remove("active");
+                btn.classList.add("off");
+                relayStateEl.innerText = "Išjungta";
+            }
+        }
+
+        // ✅ GAUGES
         if (gaugeMoisture) gaugeMoisture.set(data.moisture_percent);
         if (gaugeTemp) gaugeTemp.set(data.temperature_c);
         if (gaugePressure) gaugePressure.set(data.pressure_hpa);
@@ -141,9 +143,9 @@ async function fetchStatus() {
 /* -------------------------------
    STATUS UI
 --------------------------------*/
-function setOnline() {
+function setOnline(diff) {
     const el = document.getElementById("onlineStatus");
-    el.innerText = "ONLINE";
+    el.innerText = formatLastSeen(diff);
     el.style.color = "#00ff88";
     el.style.textShadow = "0 0 8px #00ff88";
 }
@@ -156,6 +158,20 @@ function setOffline() {
 }
 
 /* -------------------------------
+   RELAY COMMAND
+--------------------------------*/
+async function sendRelayCommand(state) {
+    await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
+        method: "POST",
+        headers: sbHeaders({
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+        }),
+        body: JSON.stringify({ relay_state: state })
+    });
+}
+
+/* -------------------------------
    START
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
@@ -164,9 +180,23 @@ window.addEventListener("DOMContentLoaded", () => {
     gaugeTemp = createGauge("gaugeTemp", 0, 60);
     gaugePressure = createGauge("gaugePressure", 600, 2000);
 
-    fetchStatus();
-    updateMonthlyUsageUI();
+    // ✅ RELAY CLICK
+    document.getElementById("relayBtn").addEventListener("click", async () => {
+        const btn = document.getElementById("relayBtn");
+        const isOn = btn.classList.contains("active");
 
-    setInterval(fetchStatus, 2000);   // ✅ mažiau apkrauna + stabiliau
-    setInterval(updateMonthlyUsageUI, 60000);
+        // instant UI
+        btn.classList.toggle("active");
+        btn.classList.toggle("off");
+
+        btn.innerText = isOn ? "Įjungti" : "Išjungti";
+
+        await sendRelayCommand(isOn ? "off" : "on");
+
+        setTimeout(fetchStatus, 800);
+    });
+
+    fetchStatus();
+
+    setInterval(fetchStatus, 2000);
 });
