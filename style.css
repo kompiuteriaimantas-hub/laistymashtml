@@ -49,11 +49,13 @@ main {
 }
 
 /* CARDS */
+
 .cards {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 12px;
 }
+
 
 .card,
 .relay-section,
@@ -72,6 +74,11 @@ main {
     overflow: hidden;
 }
 
+card {
+    padding-right: 80px;
+}
+
+
 @media (min-width: 600px) {
     .card {
         flex: 1 1 calc(33.333% - 10px);
@@ -83,12 +90,13 @@ main {
     color: rgba(255,255,255,0.7);
 }
 
-.value {
+
+value {
     font-size: 30px;
     font-weight: bold;
-    position: relative;
-    z-index: 2;
+    margin-top: 6px;
 }
+
 
 /* icon */
 .icon {
@@ -101,14 +109,14 @@ main {
 
 /* ✅ GAUGE CANVAS (FIX SIZE 🔥) */
 
+
 .card canvas {
     position: absolute;
-    top: 12px;
-    right: 12px;
-
-    opacity: 0.85;
-    pointer-events: none;
+    top: 50%;
+    right: 16px;
+    transform: translateY(-50%);
 }
+
 
 
 /* RELAY */
