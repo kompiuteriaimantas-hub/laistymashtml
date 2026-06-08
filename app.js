@@ -24,13 +24,11 @@ function createGauge(canvasId, min, max) {
         angle: 0,
         lineWidth: 0.15,
         radiusScale: 0.95,
-
         pointer: {
             length: 0.5,
             strokeWidth: 0.03,
             color: "#ffffff"
         },
-
         colorStart: "#3a8ed8",
         colorStop: "#6c757d",
         strokeColor: "#333"
@@ -45,7 +43,7 @@ function createGauge(canvasId, min, max) {
 }
 
 /* -------------------------------
-   🕒 ONLINE TIME FORMAT
+   🕒 ONLINE FORMAT
 --------------------------------*/
 function formatLastSeen(ms) {
     const s = Math.floor(ms / 1000);
@@ -55,6 +53,54 @@ function formatLastSeen(ms) {
     if (s < 60) return `Online prieš ${s}s`;
     if (m < 60) return `Online prieš ${m} min`;
     return `Online prieš ${h} val`;
+}
+
+/* -------------------------------
+   📊 MĖNESIO ISTORIJA (FIXED)
+--------------------------------*/
+async function fetchMonthlyUsage() {
+    try {
+        const now = new Date();
+        const firstDay = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            1
+        ).toISOString();
+
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
+            { headers: sbHeaders() }
+        );
+
+        return await res.json();
+    } catch (e) {
+        console.log("Monthly error:", e);
+        return [];
+    }
+}
+
+async function updateMonthlyUsageUI() {
+    const data = await fetchMonthlyUsage();
+
+    // ✅ FIX: jei nėra duomenų
+    if (!data || !Array.isArray(data)) {
+        document.getElementById("monthlyUsage").innerText =
+            "Šio mėnesio sunaudota: 0 KB";
+        return;
+    }
+
+    let total = 0;
+    for (const row of data) {
+        total += row.usage_bytes || 0;
+    }
+
+    const kb = total / 1024;
+    const mb = kb / 1024;
+
+    document.getElementById("monthlyUsage").innerText =
+        mb >= 1
+            ? `Šio mėnesio sunaudota: ${mb.toFixed(2)} MB`
+            : `Šio mėnesio sunaudota: ${kb.toFixed(1)} KB`;
 }
 
 /* -------------------------------
@@ -76,8 +122,9 @@ async function fetchStatus() {
         }
 
         const now = Date.now();
-        let ts = data.updated_at.replace(/\.\d+/, "") + "Z";
-        const updated = new Date(ts).getTime();
+        const updated = new Date(
+            data.updated_at.replace(/\.\d+/, "") + "Z"
+        ).getTime();
 
         const diff = now - updated;
 
@@ -141,7 +188,7 @@ async function fetchStatus() {
 }
 
 /* -------------------------------
-   STATUS UI
+   UI
 --------------------------------*/
 function setOnline(diff) {
     const el = document.getElementById("onlineStatus");
@@ -154,7 +201,6 @@ function setOffline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "OFFLINE";
     el.style.color = "#ffcc33";
-    el.style.textShadow = "0 0 6px rgba(255,204,51,0.5)";
 }
 
 /* -------------------------------
@@ -180,23 +226,23 @@ window.addEventListener("DOMContentLoaded", () => {
     gaugeTemp = createGauge("gaugeTemp", 0, 60);
     gaugePressure = createGauge("gaugePressure", 600, 2000);
 
-    // ✅ RELAY CLICK
+    // ✅ RELAY BUTTON
     document.getElementById("relayBtn").addEventListener("click", async () => {
         const btn = document.getElementById("relayBtn");
         const isOn = btn.classList.contains("active");
 
-        // instant UI
         btn.classList.toggle("active");
         btn.classList.toggle("off");
-
         btn.innerText = isOn ? "Įjungti" : "Išjungti";
 
         await sendRelayCommand(isOn ? "off" : "on");
 
-        setTimeout(fetchStatus, 800);
+        setTimeout(fetchStatus, 1500);
     });
 
     fetchStatus();
+    updateMonthlyUsageUI();
 
     setInterval(fetchStatus, 2000);
+    setInterval(updateMonthlyUsageUI, 60000);
 });
