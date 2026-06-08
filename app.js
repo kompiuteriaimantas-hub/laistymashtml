@@ -26,25 +26,25 @@ function createGauge(canvasId, min, max, zones, labels) {
     }
 
     const opts = {
-        angle: 0,
-        ineWidth: 0.18,
-        radiusScale: 0.7,
+    angle: 0,
+    lineWidth: 0.12,
+    radiusScale: 0.65,
 
-        pointer: {
-            length: 0.5,
-            strokeWidth: 0.04,
-            color: "#ffffff"
-        },
+    pointer: {
+        length: 0.45,
+        strokeWidth: 0.03,
+        color: "#ffffff"
+    },
 
-        staticZones: zones,
+    staticZones: zones,
 
-        staticLabels: {
-            font: "7px sans-serif",
-            labels: labels,
-            color: "#ffffff",
-            fractionDigits: 0
-        }
-    };
+    staticLabels: {
+        font: "6px sans-serif",
+        labels: labels,
+        color: "#ffffff",
+        fractionDigits: 0
+    }
+};
 
     const gauge = new Gauge(target).setOptions(opts);
 
