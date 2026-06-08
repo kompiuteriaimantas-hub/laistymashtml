@@ -58,11 +58,9 @@ async function fetchStatus() {
             return;
         }
 
-        // --- ONLINE/OFFLINE ---
         const now = Date.now();
         let ts = data.updated_at;
-        ts = ts.replace(/\.\d+/, "");
-        ts = ts + "Z";
+        ts = ts.replace(/\.\d+/, "") + "Z";
 
         const updated = new Date(ts).getTime();
 
@@ -91,14 +89,24 @@ async function fetchStatus() {
         document.getElementById("usage").innerText =
             mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
 
-        // Relay mygtukas
+        // 🔥 RELAY UI (animacijos)
         const btn = document.getElementById("relayBtn");
+        const status = document.getElementById("relayStatus");
+
         if (data.relay) {
+            // ON
             btn.innerText = "Išjungti";
-            btn.classList.add("off");
-        } else {
-            btn.innerText = "Įjungti";
+            btn.classList.add("active");
             btn.classList.remove("off");
+
+            if (status) status.classList.add("active");
+        } else {
+            // OFF
+            btn.innerText = "Įjungti";
+            btn.classList.remove("active");
+            btn.classList.add("off");
+
+            if (status) status.classList.remove("active");
         }
 
     } catch (err) {
@@ -113,7 +121,7 @@ async function fetchStatus() {
 function setOnline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "ONLINE";
-    el.style.color = "#00ff00";
+    el.style.color = "#00ff88";
 }
 
 function setOffline() {
@@ -168,6 +176,7 @@ async function resetUsage() {
         `${SUPABASE_URL}/rest/v1/status?select=id&order=id.desc&limit=1`,
         { headers: sbHeaders() }
     );
+
     const arr = await latest.json();
     const id = arr[0].id;
 
@@ -188,10 +197,23 @@ async function resetUsage() {
    STARTAS
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
+
     document.getElementById("relayBtn").addEventListener("click", async () => {
-        const isOn = document.getElementById("relayBtn").classList.contains("off");
+        const btn = document.getElementById("relayBtn");
+        const isOn = btn.classList.contains("active");
+
+        // 🔥 instant animacija
+        btn.classList.toggle("active");
+        btn.classList.toggle("off");
+
+        const status = document.getElementById("relayStatus");
+        if (status) status.classList.toggle("active");
+
+        btn.innerText = isOn ? "Įjungti" : "Išjungti";
+
         await sendRelayCommand(isOn ? "off" : "on");
-        setTimeout(fetchStatus, 1000);
+
+        setTimeout(fetchStatus, 800);
     });
 
     document.getElementById("btnDry").addEventListener("click", calibrateDry);
