@@ -42,57 +42,31 @@ function formatLastSeen(ms) {
 
 async function fetchStatus() {
     try {
-        console.log("FETCH START");
-
         const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/status?select=*`,
+            "https://wbueugwhngtgtifuasvm.supabase.co/rest/v1/status?select=*",
             {
+                method: "GET",
                 headers: {
                     apikey: SUPABASE_KEY
                 }
             }
         );
 
-        console.log("STATUS:", res.status);
-
-        const text = await res.text();
-        console.log("RAW:", text);
-
-        let data;
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            console.log("JSON PARSE ERROR");
-            return;
-        }
-
+        const data = await res.json();
         console.log("DATA:", data);
 
-        if (!data || data.length === 0) {
-            console.log("NO DATA FROM DB");
-            return;
-        }
+        if (!data || data.length === 0) return;
 
         const row = data[0];
 
         document.getElementById("moisture").innerText =
             row.moisture_percent ?? "-";
 
-        document.getElementById("temperature").innerText =
-            row.temperature_c ?? "-";
-
-        document.getElementById("pressure").innerText =
-            row.pressure_hpa ?? "-";
-
-        document.getElementById("usage").innerText =
-            row.usage_bytes ?? "-";
-
-        document.getElementById("onlineStatus").innerText = "OK";
-
     } catch (e) {
-        console.log("ERROR:", e);
+        console.log("ERR:", e);
     }
 }
+
 
 
         /* LOCKDOWN */
