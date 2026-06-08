@@ -16,14 +16,62 @@ function sbHeaders(extra = {}) {
 --------------------------------*/
 let gaugeMoisture, gaugeTemp, gaugePressure;
 
-function createGauge(canvasId, min, max, zones, labels) {
+function createGauge(canvasId, min, max) {
     const target = document.getElementById(canvasId);
 
-    // ✅ safety (kad nelūžtų)
-    if (!target || typeof Gauge === "undefined") {
-        console.warn("Gauge missing:", canvasId);
-        return null;
-    }
+    if (!target || typeof Gauge === "undefined") return null;
+
+    const opts = {
+        angle: -0.2, // šiek tiek „atveriam“ lanką
+        lineWidth: 0.12, // 🔥 plonas (svarbiausia)
+
+        radiusScale: 0.9,
+
+        pointer: {
+            length: 0.55,
+            strokeWidth: 0.03,
+            color: "#ffffff"
+        },
+
+        // 🔥 ZONOS (plius gražus gradient efektas)
+        staticZones: [
+            {strokeStyle: "#3a8ed8", min: min, max: max * 0.7},
+            {strokeStyle: "#6c757d", min: max * 0.7, max: max}
+        ],
+
+        // 🔥 SKALE (skaičiai)
+        staticLabels: {
+            font: "8px sans-serif",
+            labels: [
+                min,
+                Math.round((min + max) / 2),
+                max
+            ],
+            color: "#ccc",
+            fractionDigits: 0
+        },
+
+        // 🔥 TICK'AI (labai svarbu)
+        renderTicks: {
+            divisions: 5,
+            divWidth: 1.3,
+            divLength: 6,
+            divColor: "#aaa",
+
+            subDivisions: 2,
+            subLength: 3,
+            subWidth: 1,
+            subColor: "#666"
+        }
+    };
+
+    const gauge = new Gauge(target).setOptions(opts);
+    gauge.setMinValue(min);
+    gauge.maxValue = max;
+    gauge.animationSpeed = 25;
+
+    return gauge;
+}
 
     const opts = {
     angle: 0,
