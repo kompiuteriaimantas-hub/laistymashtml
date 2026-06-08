@@ -1,6 +1,6 @@
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+    "eyJhbGciOiJIUzI1NiIsInT5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
 function sbHeaders(extra = {}) {
     return {
@@ -11,41 +11,39 @@ function sbHeaders(extra = {}) {
 }
 
 /* -------------------------------
-   🔥 GAUGES
+   🔥 GAUGES SU SKALĖM
 --------------------------------*/
 let gaugeMoisture, gaugeTemp, gaugePressure;
 
-function createGradientGauge(canvasId, maxValue, colors) {
+function createGauge(canvasId, min, max, zones, labels) {
     const opts = {
         angle: 0,
-        lineWidth: 0.25,
-        radiusScale: 0.9,
+        lineWidth: 0.22,
+        radiusScale: 0.85,
+
         pointer: {
-            length: 0.55,
+            length: 0.5,
             strokeWidth: 0.04,
             color: "#ffffff"
         },
-        renderTicks: { divisions: 0 }
+
+        staticZones: zones,
+
+        staticLabels: {
+            font: "7px sans-serif",
+            labels: labels,
+            color: "#ffffff",
+            fractionDigits: 0
+        }
     };
 
     const target = document.getElementById(canvasId);
     const gauge = new Gauge(target).setOptions(opts);
 
-    gauge.maxValue = maxValue;
-    gauge.setMinValue(0);
+    gauge.maxValue = max;
+    gauge.setMinValue(min);
     gauge.animationSpeed = 32;
 
-    const ctx = target.getContext("2d");
-    const gradient = ctx.createLinearGradient(0, 0, 100, 0);
-
-    colors.forEach((c, i) => {
-        gradient.addColorStop(i / (colors.length - 1), c);
-    });
-
-    opts.colorStart = gradient;
-    opts.colorStop = gradient;
-
-    gauge.set(0);
     return gauge;
 }
 
@@ -80,7 +78,7 @@ async function updateMonthlyUsageUI() {
 }
 
 /* -------------------------------
-   STATUSO FUNKCIJA
+   STATUS
 --------------------------------*/
 async function fetchStatus() {
     try {
@@ -97,7 +95,6 @@ async function fetchStatus() {
             return;
         }
 
-        // ONLINE logika
         const now = Date.now();
         let ts = data.updated_at.replace(/\.\d+/, "") + "Z";
         const updated = new Date(ts).getTime();
@@ -127,7 +124,7 @@ async function fetchStatus() {
         document.getElementById("usage").innerText =
             mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
 
-        // 🔥 GAUGE UPDATE
+        // 🔥 UPDATE GAUGES
         if (gaugeMoisture) gaugeMoisture.set(data.moisture_percent);
         if (gaugeTemp) gaugeTemp.set(data.temperature_c);
         if (gaugePressure) gaugePressure.set(data.pressure_hpa);
@@ -155,24 +152,22 @@ async function fetchStatus() {
 }
 
 /* -------------------------------
-   STATUS
+   ONLINE / OFFLINE
 --------------------------------*/
 function setOnline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "ONLINE";
     el.style.color = "#00ff88";
-    el.style.textShadow = "0 0 8px #00ff88";
 }
 
 function setOffline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "OFFLINE";
     el.style.color = "#ffcc33";
-    el.style.textShadow = "0 0 5px #ffcc33";
 }
 
 /* -------------------------------
-   KOMANDOS
+   COMMAND
 --------------------------------*/
 async function sendRelayCommand(state) {
     await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
@@ -183,24 +178,50 @@ async function sendRelayCommand(state) {
 }
 
 /* -------------------------------
-   STARTAS
+   START
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
 
-    // 🔥 CREATE GAUGES
-    gaugeMoisture = createGradientGauge("gaugeMoisture", 100, [
-        "#e53935", "#fbc02d", "#43a047"
-    ]);
+    // ✅ DRĖGMĖ (0–100)
+    gaugeMoisture = createGauge(
+        "gaugeMoisture",
+        0,
+        100,
+        [
+            {strokeStyle: "#e53935", min: 0, max: 30},
+            {strokeStyle: "#fbc02d", min: 30, max: 70},
+            {strokeStyle: "#43a047", min: 70, max: 100}
+        ],
+        [0, 20, 40, 60, 80, 100]
+    );
 
-    gaugeTemp = createGradientGauge("gaugeTemp", 50, [
-        "#2196f3", "#00e5ff", "#e53935"
-    ]);
+    // ✅ TEMP (0–60)
+    gaugeTemp = createGauge(
+        "gaugeTemp",
+        0,
+        60,
+        [
+            {strokeStyle: "#2196f3", min: 0, max: 20},
+            {strokeStyle: "#4caf50", min: 20, max: 40},
+            {strokeStyle: "#e53935", min: 40, max: 60}
+        ],
+        [0, 20, 40, 60]
+    );
 
-    gaugePressure = createGradientGauge("gaugePressure", 1100, [
-        "#9c27b0", "#03a9f4"
-    ]);
+    // ✅ SLĖGIS (600–2000)
+    gaugePressure = createGauge(
+        "gaugePressure",
+        600,
+        2000,
+        [
+            {strokeStyle: "#2196f3", min: 600, max: 1000},
+            {strokeStyle: "#4caf50", min: 1000, max: 1400},
+            {strokeStyle: "#9c27b0", min: 1400, max: 2000}
+        ],
+        [600, 1000, 1400, 2000]
+    );
 
-    // RELAY CLICK
+    // RELAY
     document.getElementById("relayBtn").addEventListener("click", async () => {
         const btn = document.getElementById("relayBtn");
         const isOn = btn.classList.contains("active");
