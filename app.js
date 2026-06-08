@@ -2,12 +2,10 @@ const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
 
-/* ✅ be Authorization – svarbiausia */
-function sbHeaders(extra = {}) {
+/* PAPRASTI HEADERS (be Authorization, be Content-Type GET) */
+function sbHeaders() {
     return {
-        apikey: SUPABASE_KEY,
-        "Content-Type": "application/json",
-        ...extra
+        apikey: SUPABASE_KEY
     };
 }
 
@@ -38,17 +36,16 @@ function formatLastSeen(ms) {
     return `Online prieš ${h} val`;
 }
 
-/* STATUS */
-
+/* 🔥 PAGRINDINĖ FUNKCIJA */
 async function fetchStatus() {
     try {
+        console.log("FETCH START");
+
         const res = await fetch(
-            "https://wbueugwhngtgtifuasvm.supabase.co/rest/v1/status?select=*",
+            `${SUPABASE_URL}/rest/v1/status?select=*&order=id.desc&limit=1`,
             {
                 method: "GET",
-                headers: {
-                    apikey: SUPABASE_KEY
-                }
+                headers: sbHeaders()
             }
         );
 
@@ -59,26 +56,52 @@ async function fetchStatus() {
 
         const row = data[0];
 
-        document.getElementById("moisture").innerText =
-            row.moisture_percent ?? "-";
+        /* SENSORIAI */
+        document.getElementById("moisture").innerText = row.moisture_percent ?? "-";
+        document.getElementById("temperature").innerText = row.temperature_c ?? "-";
+        document.getElementById("pressure").innerText = row.pressure_hpa ?? "-";
 
-    } catch (e) {
-        console.log("ERR:", e);
-    }
-}
+        /* WIFI */
+        const wifiEl = document.getElementById("wifi");
+        if (wifiEl && row.wifi_rssi != null) {
+            wifiEl.innerText = `${row.wifi_rssi} dBm (${getWifiLabel(row.wifi_rssi)})`;
+            wifiEl.style.color = getWifiColor(row.wifi_rssi);
+        }
 
+        /* USAGE */
+        const usageEl = document.getElementById("usage");
+        if (usageEl) {
+            const usage = Number(row.usage_bytes);
 
+            if (!isNaN(usage)) {
+                const kb = usage / 1024;
+                const mb = kb / 1024;
 
-
+                usageEl.innerText =
+                    mb >= 1
+                        ? mb.toFixed(2) + " MB"
+                        : kb.toFixed(1) + " KB";
+            } else {
+                usageEl.innerText = "-";
+            }
+        }
 
         /* LOCKDOWN */
-        document.getElementById("lockdownState").innerText =
-            data.lockdown ? "TAIP" : "NE";
+        const lockEl = document.getElementById("lockdownState");
+        if (lockEl) {
+            lockEl.innerText = row.lockdown ? "TAIP" : "NE";
+        }
 
         /* ONLINE STATUS */
         const el = document.getElementById("onlineStatus");
 
-        if (data.lockdown) {
+        if (!row.updated_at) return;
+
+        const updated = new Date(row.updated_at).getTime();
+        const diff = Date.now() - updated;
+        const isOffline = diff > 120000;
+
+        if (row.lockdown) {
             el.innerText = "LOCKDOWN";
             el.style.color = "red";
         } else if (isOffline) {
@@ -95,3 +118,7 @@ async function fetchStatus() {
 }
 
 /* START */
+window.addEventListener("DOMContentLoaded", () => {
+    fetchStatus();
+    setInterval(fetchStatus, 2000);
+});
