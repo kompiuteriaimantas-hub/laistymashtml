@@ -14,7 +14,7 @@ async function login() {
     const pw = document.getElementById("pwInput").value;
 
     const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/auth?select=password&limit=1`,
+        `${SUPABASE_URL}/rest/v1/config?select=password&limit=1`,
         { headers: sbHeaders() }
     );
 
