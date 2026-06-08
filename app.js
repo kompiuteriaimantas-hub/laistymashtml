@@ -27,8 +27,8 @@ function createGauge(canvasId, min, max, zones, labels) {
 
     const opts = {
         angle: 0,
-        lineWidth: 0.22,
-        radiusScale: 0.85,
+        ineWidth: 0.18,
+        radiusScale: 0.7,
 
         pointer: {
             length: 0.5,
