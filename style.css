@@ -48,15 +48,14 @@ main {
     margin: auto;
 }
 
-/* CARDS */
-
+/* ✅ GRID tvarkingas */
 .cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 12px;
 }
 
-
+/* GLASS */
 .card,
 .relay-section,
 .calibration {
@@ -68,64 +67,50 @@ main {
     box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
 
+/* ✅ FIX: vieta gauge */
 .card {
-    flex: 1 1 100%;
     position: relative;
-    overflow: hidden;
-}
-
-card {
     padding-right: 80px;
+    min-height: 100px;
 }
 
-
-@media (min-width: 600px) {
-    .card {
-        flex: 1 1 calc(33.333% - 10px);
-    }
-}
-
-
+/* TEXT */
 .card h2 {
     margin-bottom: 6px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
 }
 
-
-
-value {
-    font-size: 30px;
+.value {
+    font-size: 28px;
     font-weight: bold;
-    margin-top: 6px;
 }
 
+/* ✅ GAUGE teisingas */
+.card canvas {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
 
-/* icon */
+    width: 60px;
+    height: 60px;
+}
+
+/* ICON */
 .icon {
     position: absolute;
     bottom: 10px;
-    right: 12px;
+    left: 12px;
     opacity: 0.2;
-    font-size: 24px;
+    font-size: 22px;
 }
-
-/* ✅ GAUGE CANVAS (FIX SIZE 🔥) */
-
-
-.card canvas {
-    position: absolute;
-    top: 50%;
-    right: 16px;
-    transform: translateY(-50%);
-}
-
-
 
 /* RELAY */
 .relay-section {
     margin-top: 12px;
 }
 
-/* status LED */
 .relay-status {
     display: flex;
     align-items: center;
@@ -164,24 +149,19 @@ value {
     transition: all 0.2s ease;
 }
 
-/* click */
 .relay-btn:active {
     transform: scale(0.9);
 }
 
-/* OFF */
 .relay-btn.off {
     background: rgba(255, 80, 80, 0.4);
 }
 
-/* ✅ ACTIVE */
 .relay-btn.active {
     background: linear-gradient(145deg, #43a047, #2e7d32);
-
     box-shadow:
         0 0 20px rgba(67,160,71,0.7),
         0 0 60px rgba(67,160,71,0.5);
-
     animation: pulseGlow 2s infinite;
 }
 
@@ -201,21 +181,6 @@ value {
             0 0 10px rgba(67,160,71,0.4),
             0 0 25px rgba(67,160,71,0.2);
     }
-}
-
-/* 💧 water efektas */
-.relay-btn.active::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.25), transparent);
-    animation: spin 4s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }
 
 /* CALIBRATION */
