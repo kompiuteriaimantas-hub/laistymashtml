@@ -12,37 +12,6 @@ function sbHeaders(extra = {}) {
 }
 
 /* -------------------------------
-   🔥 GAUGES
---------------------------------*/
-let gaugeMoisture, gaugeTemp, gaugePressure;
-
-function createGauge(canvasId, min, max) {
-    const target = document.getElementById(canvasId);
-    if (!target || typeof Gauge === "undefined") return null;
-
-    const opts = {
-        angle: 0,
-        lineWidth: 0.15,
-        radiusScale: 0.95,
-        pointer: {
-            length: 0.5,
-            strokeWidth: 0.03,
-            color: "#ffffff"
-        },
-        colorStart: "#3a8ed8",
-        colorStop: "#6c757d",
-        strokeColor: "#333"
-    };
-
-    const gauge = new Gauge(target).setOptions(opts);
-    gauge.setMinValue(min);
-    gauge.maxValue = max;
-    gauge.set(0);
-
-    return gauge;
-}
-
-/* -------------------------------
    🕒 ONLINE FORMAT
 --------------------------------*/
 function formatLastSeen(ms) {
@@ -56,16 +25,12 @@ function formatLastSeen(ms) {
 }
 
 /* -------------------------------
-   📊 MĖNESIO ISTORIJA (FIXED)
+   📊 MĖNESIO ISTORIJA
 --------------------------------*/
 async function fetchMonthlyUsage() {
     try {
         const now = new Date();
-        const firstDay = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            1
-        ).toISOString();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
         const res = await fetch(
             `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
@@ -82,7 +47,6 @@ async function fetchMonthlyUsage() {
 async function updateMonthlyUsageUI() {
     const data = await fetchMonthlyUsage();
 
-    // ✅ FIX: jei nėra duomenų
     if (!data || !Array.isArray(data)) {
         document.getElementById("monthlyUsage").innerText =
             "Šio mėnesio sunaudota: 0 KB";
@@ -128,26 +92,22 @@ async function fetchStatus() {
 
         const diff = now - updated;
 
+        let isOffline = false;
         if (isNaN(updated) || diff > 120000) {
-            setOffline();
-        } else {
-            setOnline(diff);
+            isOffline = true;
         }
 
-        // ✅ SENSORIAI
+        // ✅ VISADA rodom duomenis
         document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
         document.getElementById("temperature").innerText = data.temperature_c ?? "-";
         document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
 
-        // ✅ WIFI
         const wifiEl = document.getElementById("wifi");
         if (wifiEl) wifiEl.innerText = data.wifi_rssi ?? "-";
 
-        // ✅ LOCKDOWN
         const lockEl = document.getElementById("lockdownState");
         if (lockEl) lockEl.innerText = data.lockdown ? "TAIP" : "NE";
 
-        // ✅ USAGE
         const usageBytes = data.usage_bytes || 0;
         const kb = usageBytes / 1024;
         const mb = kb / 1024;
@@ -176,10 +136,18 @@ async function fetchStatus() {
             }
         }
 
-        // ✅ GAUGES
-        if (gaugeMoisture) gaugeMoisture.set(data.moisture_percent);
-        if (gaugeTemp) gaugeTemp.set(data.temperature_c);
-        if (gaugePressure) gaugePressure.set(data.pressure_hpa);
+        // ✅ ONLINE + LOCKDOWN LOGIKA
+        const el = document.getElementById("onlineStatus");
+
+        if (data.lockdown) {
+            el.innerText = "LOCKDOWN";
+            el.style.color = "#ff4444";
+            el.style.textShadow = "0 0 10px #ff4444";
+        } else if (isOffline) {
+            setOffline();
+        } else {
+            setOnline(diff);
+        }
 
     } catch (err) {
         console.log("JS error:", err);
@@ -204,7 +172,7 @@ function setOffline() {
 }
 
 /* -------------------------------
-   RELAY COMMAND
+   RELAY
 --------------------------------*/
 async function sendRelayCommand(state) {
     await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
@@ -222,11 +190,6 @@ async function sendRelayCommand(state) {
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
 
-    gaugeMoisture = createGauge("gaugeMoisture", 0, 100);
-    gaugeTemp = createGauge("gaugeTemp", 0, 60);
-    gaugePressure = createGauge("gaugePressure", 600, 2000);
-
-    // ✅ RELAY BUTTON
     document.getElementById("relayBtn").addEventListener("click", async () => {
         const btn = document.getElementById("relayBtn");
         const isOn = btn.classList.contains("active");
@@ -246,3 +209,4 @@ window.addEventListener("DOMContentLoaded", () => {
     setInterval(fetchStatus, 2000);
     setInterval(updateMonthlyUsageUI, 60000);
 });
+``
