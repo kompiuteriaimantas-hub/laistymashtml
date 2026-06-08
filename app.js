@@ -1,7 +1,7 @@
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 
 const SUPABASE_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
 function sbHeaders(extra = {}) {
     return {
@@ -12,7 +12,7 @@ function sbHeaders(extra = {}) {
 }
 
 /* -------------------------------
-   🔥 GAUGES SU SKALĖMIS
+   🔥 GAUGE (STABILUS)
 --------------------------------*/
 let gaugeMoisture, gaugeTemp, gaugePressure;
 
@@ -22,7 +22,7 @@ function createGauge(canvasId, min, max) {
 
     const opts = {
         angle: 0,
-        lineWidth: 0.12,
+        lineWidth: 0.14,
         radiusScale: 0.9,
 
         pointer: {
@@ -32,13 +32,13 @@ function createGauge(canvasId, min, max) {
         },
 
         staticZones: [
-            {strokeStyle: "#3a8ed8", min: min, max: max * 0.7},
-            {strokeStyle: "#6c757d", min: max * 0.7, max: max}
+            { strokeStyle: "#3a8ed8", min: min, max: max * 0.7 },
+            { strokeStyle: "#666", min: max * 0.7, max: max }
         ],
 
         staticLabels: {
             font: "7px sans-serif",
-            labels: [min, Math.round((min + max)/2), max],
+            labels: [min, Math.round((min + max) / 2), max],
             color: "#ccc"
         }
     };
@@ -46,37 +46,7 @@ function createGauge(canvasId, min, max) {
     const gauge = new Gauge(target).setOptions(opts);
     gauge.setMinValue(min);
     gauge.maxValue = max;
-
-    return gauge;
-}
-
-
-    const opts = {
-    angle: 0,
-    lineWidth: 0.14,
-    radiusScale: 1,
-
-    pointer: {
-        length: 0.45,
-        strokeWidth: 0.03,
-        color: "#ffffff"
-    },
-
-    staticZones: zones,
-
-    staticLabels: {
-        font: "6px sans-serif",
-        labels: labels,
-        color: "#ffffff",
-        fractionDigits: 0
-    }
-};
-
-    const gauge = new Gauge(target).setOptions(opts);
-
-    gauge.maxValue = max;
-    gauge.setMinValue(min);
-    gauge.animationSpeed = 32;
+    gauge.set(0);
 
     return gauge;
 }
@@ -139,45 +109,14 @@ async function fetchStatus() {
             setOnline();
         }
 
-        // ✅ UI update
         document.getElementById("moisture").innerText = data.moisture_percent;
         document.getElementById("temperature").innerText = data.temperature_c;
         document.getElementById("pressure").innerText = data.pressure_hpa;
-        document.getElementById("wifi").innerText = data.wifi_rssi;
-
-        document.getElementById("relayState").innerText =
-            data.relay ? "Įjungta" : "Išjungta";
-
-        document.getElementById("lockdownState").innerText =
-            data.lockdown ? "TAIP" : "NE";
-
-        const usageBytes = data.usage_bytes || 0;
-        const kb = usageBytes / 1024;
-        const mb = kb / 1024;
-
-        document.getElementById("usage").innerText =
-            mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
 
         // ✅ GAUGES UPDATE
         if (gaugeMoisture) gaugeMoisture.set(data.moisture_percent);
         if (gaugeTemp) gaugeTemp.set(data.temperature_c);
         if (gaugePressure) gaugePressure.set(data.pressure_hpa);
-
-        // ✅ RELAY UI
-        const btn = document.getElementById("relayBtn");
-        const status = document.getElementById("relayStatus");
-
-        if (data.relay) {
-            btn.innerText = "Išjungti";
-            btn.classList.add("active");
-            btn.classList.remove("off");
-            if (status) status.classList.add("active");
-        } else {
-            btn.innerText = "Įjungti";
-            btn.classList.remove("active");
-            btn.classList.add("off");
-            if (status) status.classList.remove("active");
-        }
 
     } catch (err) {
         console.log("JS error:", err);
@@ -186,37 +125,19 @@ async function fetchStatus() {
 }
 
 /* -------------------------------
-   ONLINE / OFFLINE
+   STATUS UI
 --------------------------------*/
-
 function setOnline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "ONLINE";
     el.style.color = "#00ff88";
-
-    // 🔥 GLOW fix
-    el.style.textShadow = "0 0 8px #00ff88, 0 0 16px rgba(0,255,136,0.6)";
+    el.style.textShadow = "0 0 8px #00ff88";
 }
-
-
 
 function setOffline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "OFFLINE";
     el.style.color = "#ffcc33";
-    el.style.textShadow = "0 0 6px rgba(255,204,51,0.5)";
-}
-
-
-/* -------------------------------
-   COMMAND
---------------------------------*/
-async function sendRelayCommand(state) {
-    await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
-        method: "POST",
-        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
-        body: JSON.stringify({ relay_state: state })
-    });
 }
 
 /* -------------------------------
@@ -224,62 +145,9 @@ async function sendRelayCommand(state) {
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
 
-    // ✅ DRĖGMĖ (0–100)
-    gaugeMoisture = createGauge(
-        "gaugeMoisture",
-        0,
-        100,
-        [
-            {strokeStyle: "#e53935", min: 0, max: 30},
-            {strokeStyle: "#fbc02d", min: 30, max: 70},
-            {strokeStyle: "#43a047", min: 70, max: 100}
-        ],
-        [0, 20, 40, 60, 80, 100]
-    );
-
-    // ✅ TEMP (0–60)
-    gaugeTemp = createGauge(
-        "gaugeTemp",
-        0,
-        60,
-        [
-            {strokeStyle: "#2196f3", min: 0, max: 20},
-            {strokeStyle: "#4caf50", min: 20, max: 40},
-            {strokeStyle: "#e53935", min: 40, max: 60}
-        ],
-        [0, 20, 40, 60]
-    );
-
-    // ✅ SLĖGIS (600–2000)
-    gaugePressure = createGauge(
-        "gaugePressure",
-        600,
-        2000,
-        [
-            {strokeStyle: "#2196f3", min: 600, max: 1000},
-            {strokeStyle: "#4caf50", min: 1000, max: 1400},
-            {strokeStyle: "#9c27b0", min: 1400, max: 2000}
-        ],
-        [600, 1000, 1400, 2000]
-    );
-
-    // ✅ RELAY CLICK
-    document.getElementById("relayBtn").addEventListener("click", async () => {
-        const btn = document.getElementById("relayBtn");
-        const isOn = btn.classList.contains("active");
-
-        btn.classList.toggle("active");
-        btn.classList.toggle("off");
-
-        const status = document.getElementById("relayStatus");
-        if (status) status.classList.toggle("active");
-
-        btn.innerText = isOn ? "Įjungti" : "Išjungti";
-
-        await sendRelayCommand(isOn ? "off" : "on");
-
-        setTimeout(fetchStatus, 800);
-    });
+    gaugeMoisture = createGauge("gaugeMoisture", 0, 100);
+    gaugeTemp = createGauge("gaugeTemp", 0, 60);
+    gaugePressure = createGauge("gaugePressure", 600, 2000);
 
     fetchStatus();
     updateMonthlyUsageUI();
@@ -287,4 +155,3 @@ window.addEventListener("DOMContentLoaded", () => {
     setInterval(fetchStatus, 1500);
     setInterval(updateMonthlyUsageUI, 60000);
 });
-``
