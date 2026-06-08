@@ -58,7 +58,6 @@ async function fetchStatus() {
             return;
         }
 
-        // --- ONLINE/OFFLINE ---
         const now = Date.now();
         let ts = data.updated_at;
         ts = ts.replace(/\.\d+/, "");
@@ -91,14 +90,24 @@ async function fetchStatus() {
         document.getElementById("usage").innerText =
             mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
 
-        // Relay mygtukas
+        // 🔥 RELAY UI (PATAISYTA DALIS)
         const btn = document.getElementById("relayBtn");
+        const status = document.getElementById("relayStatus");
+
         if (data.relay) {
+            // ✅ ACTIVE
             btn.innerText = "Išjungti";
-            btn.classList.add("off");
-        } else {
-            btn.innerText = "Įjungti";
+            btn.classList.add("active");
             btn.classList.remove("off");
+
+            if (status) status.classList.add("active");
+        } else {
+            // ✅ OFF
+            btn.innerText = "Įjungti";
+            btn.classList.remove("active");
+            btn.classList.add("off");
+
+            if (status) status.classList.remove("active");
         }
 
     } catch (err) {
@@ -108,12 +117,12 @@ async function fetchStatus() {
 }
 
 /* -------------------------------
-   BŪSENOS FUNKCIJOS
+   STATUS
 --------------------------------*/
 function setOnline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "ONLINE";
-    el.style.color = "#00ff00";
+    el.style.color = "#00ff88";
 }
 
 function setOffline() {
@@ -189,9 +198,14 @@ async function resetUsage() {
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("relayBtn").addEventListener("click", async () => {
-        const isOn = document.getElementById("relayBtn").classList.contains("off");
+        const isOn = document.getElementById("relayBtn").classList.contains("active");
+
         await sendRelayCommand(isOn ? "off" : "on");
-        setTimeout(fetchStatus, 1000);
+
+        // 🔥 momentinis UI efektas (nereikia laukti serverio)
+        toggleRelayUI(!isOn);
+
+        setTimeout(fetchStatus, 800);
     });
 
     document.getElementById("btnDry").addEventListener("click", calibrateDry);
@@ -205,3 +219,24 @@ window.addEventListener("DOMContentLoaded", () => {
     setInterval(fetchStatus, 1000);
     setInterval(updateMonthlyUsageUI, 60000);
 });
+
+/* 🔥 UI helper */
+function toggleRelayUI(active) {
+    const btn = document.getElementById("relayBtn");
+    const status = document.getElementById("relayStatus");
+
+    if (active) {
+        btn.classList.add("active");
+        btn.classList.remove("off");
+        btn.innerText = "Išjungti";
+
+        if (status) status.classList.add("active");
+    } else {
+        btn.classList.remove("active");
+        btn.classList.add("off");
+        btn.innerText = "Įjungti";
+
+        if (status) status.classList.remove("active");
+    }
+}
+``
