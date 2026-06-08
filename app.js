@@ -18,49 +18,38 @@ let gaugeMoisture, gaugeTemp, gaugePressure;
 
 function createGauge(canvasId, min, max) {
     const target = document.getElementById(canvasId);
-
     if (!target || typeof Gauge === "undefined") return null;
 
     const opts = {
-        angle: -0.2, // šiek tiek „atveriam“ lanką
-        lineWidth: 0.12, // 🔥 plonas (svarbiausia)
-
+        angle: 0,
+        lineWidth: 0.12,
         radiusScale: 0.9,
 
         pointer: {
-            length: 0.55,
+            length: 0.5,
             strokeWidth: 0.03,
             color: "#ffffff"
         },
 
-        // 🔥 ZONOS (plius gražus gradient efektas)
         staticZones: [
             {strokeStyle: "#3a8ed8", min: min, max: max * 0.7},
             {strokeStyle: "#6c757d", min: max * 0.7, max: max}
         ],
 
-        // 🔥 SKALE (skaičiai)
         staticLabels: {
-            font: "8px sans-serif",
-            labels: [
-                min,
-                Math.round((min + max) / 2),
-                max
-            ],
-            color: "#ccc",
-            fractionDigits: 0
-        },
-
-       
+            font: "7px sans-serif",
+            labels: [min, Math.round((min + max)/2), max],
+            color: "#ccc"
+        }
     };
 
     const gauge = new Gauge(target).setOptions(opts);
     gauge.setMinValue(min);
     gauge.maxValue = max;
-    gauge.animationSpeed = 25;
 
     return gauge;
 }
+
 
     const opts = {
     angle: 0,
