@@ -64,7 +64,7 @@ async function fetchStatus() {
 
         const updated = new Date(ts).getTime();
 
-        if (isNaN(updated) || now - updated > 15000) {
+        if (isNaN(updated) || now - updated > 30000) {
             setOffline();
         } else {
             setOnline();
