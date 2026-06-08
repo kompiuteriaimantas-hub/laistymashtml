@@ -100,18 +100,16 @@ main {
 }
 
 /* ✅ GAUGE CANVAS (FIX SIZE 🔥) */
+
 .card canvas {
     position: absolute;
-    top: 10px;
-    right: 10px;
-
-    width: 60px !important;
-    height: 60px !important;
+    top: 12px;
+    right: 12px;
 
     opacity: 0.85;
-
     pointer-events: none;
 }
+
 
 /* RELAY */
 .relay-section {
