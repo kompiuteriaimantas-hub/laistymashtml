@@ -51,18 +51,7 @@ function createGauge(canvasId, min, max) {
             fractionDigits: 0
         },
 
-        // 🔥 TICK'AI (labai svarbu)
-        renderTicks: {
-            divisions: 5,
-            divWidth: 1.3,
-            divLength: 6,
-            divColor: "#aaa",
-
-            subDivisions: 2,
-            subLength: 3,
-            subWidth: 1,
-            subColor: "#666"
-        }
+       
     };
 
     const gauge = new Gauge(target).setOptions(opts);
