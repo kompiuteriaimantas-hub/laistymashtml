@@ -119,7 +119,26 @@ async function fetchStatus() {
             wifiEl.innerText = `${rssi} dBm (${getWifiLabel(rssi)})`;
             wifiEl.style.color = getWifiColor(rssi);
         }
+// ✅ DUOMENŲ NAUDOJIMAS (dabartinis)
+const usageEl = document.getElementById("usage");
 
+if (usageEl) {
+    const usageBytes = Number(data.usage_bytes);
+
+    if (!isNaN(usageBytes)) {
+        const kb = usageBytes / 1024;
+        const mb = kb / 1024;
+
+        usageEl.innerText =
+            mb >= 1
+                ? mb.toFixed(2) + " MB"
+                : kb.toFixed(1) + " KB";
+    } else {
+        usageEl.innerText = "-";
+    }
+}
+
+        
         // ✅ LOCKDOWN
         document.getElementById("lockdownState").innerText =
             data.lockdown ? "TAIP" : "NE";
