@@ -87,6 +87,17 @@ async function updateMonthlyUsageUI() {
             : `Šio mėnesio sunaudota: ${kb.toFixed(1)} KB`;
 }
 
+async function resetMonth() {
+    await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
+        method: "POST",
+        headers: sbHeaders({
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+        }),
+        body: JSON.stringify({ reset_month: true })
+    });
+}
+
 /* -------------------------------
    STATUS
 --------------------------------*/
@@ -243,6 +254,19 @@ window.addEventListener("DOMContentLoaded", () => {
     updateMonthlyUsageUI();
     setInterval(fetchStatus, 1000);
     setInterval(updateMonthlyUsageUI, 60000);
+});
+
+    document.getElementById("btnResetMonth").addEventListener("click", async () => {
+    const btn = document.getElementById("btnResetMonth");
+    btn.innerText = "...";
+    
+    await resetMonth();
+
+    setTimeout(() => {
+        fetchStatus();
+        updateMonthlyUsageUI();
+        btn.innerText = "Reset mėnesį";
+    }, 2000);
 });
 
     // RELAY
