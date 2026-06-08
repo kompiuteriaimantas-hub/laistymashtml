@@ -54,6 +54,22 @@ main {
     flex-wrap: wrap;
     gap: 12px;
 }
+.card {
+    position: relative;
+}
+
+/* 🔥 mažas fixed gauge */
+.card canvas {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+
+    width: 60px !important;
+    height: 60px !important;
+
+    opacity: 0.9;
+    pointer-events: none;
+}
 
 .card,
 .relay-section,
