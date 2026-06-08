@@ -39,49 +39,61 @@ function formatLastSeen(ms) {
 }
 
 /* STATUS */
+
 async function fetchStatus() {
     try {
+        console.log("FETCH START");
+
         const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/status?select=*&order=id.desc&limit=1`,
-            { headers: sbHeaders() }
+            `${SUPABASE_URL}/rest/v1/status?select=*`,
+            {
+                headers: {
+                    apikey: SUPABASE_KEY
+                }
+            }
         );
 
-        const data = (await res.json())[0];
-        if (!data) return;
+        console.log("STATUS:", res.status);
 
-        const updated = new Date(data.updated_at).getTime();
-        const diff = Date.now() - updated;
-        const isOffline = diff > 120000;
+        const text = await res.text();
+        console.log("RAW:", text);
 
-        /* SENSORIAI */
-        document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
-        document.getElementById("temperature").innerText = data.temperature_c ?? "-";
-        document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
-
-        /* WIFI */
-        const wifiEl = document.getElementById("wifi");
-        if (wifiEl && data.wifi_rssi != null) {
-            wifiEl.innerText = `${data.wifi_rssi} dBm (${getWifiLabel(data.wifi_rssi)})`;
-            wifiEl.style.color = getWifiColor(data.wifi_rssi);
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.log("JSON PARSE ERROR");
+            return;
         }
 
-        /* ✅ DUOMENŲ NAUDOJIMAS */
-        const usageEl = document.getElementById("usage");
-        if (usageEl) {
-            const usage = Number(data.usage_bytes);
+        console.log("DATA:", data);
 
-            if (!isNaN(usage)) {
-                const kb = usage / 1024;
-                const mb = kb / 1024;
-
-                usageEl.innerText =
-                    mb >= 1
-                        ? mb.toFixed(2) + " MB"
-                        : kb.toFixed(1) + " KB";
-            } else {
-                usageEl.innerText = "-";
-            }
+        if (!data || data.length === 0) {
+            console.log("NO DATA FROM DB");
+            return;
         }
+
+        const row = data[0];
+
+        document.getElementById("moisture").innerText =
+            row.moisture_percent ?? "-";
+
+        document.getElementById("temperature").innerText =
+            row.temperature_c ?? "-";
+
+        document.getElementById("pressure").innerText =
+            row.pressure_hpa ?? "-";
+
+        document.getElementById("usage").innerText =
+            row.usage_bytes ?? "-";
+
+        document.getElementById("onlineStatus").innerText = "OK";
+
+    } catch (e) {
+        console.log("ERROR:", e);
+    }
+}
+
 
         /* LOCKDOWN */
         document.getElementById("lockdownState").innerText =
