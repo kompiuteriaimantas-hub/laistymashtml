@@ -104,11 +104,22 @@ async function fetchStatus() {
 
         /* WIFI */
         const wifiEl = document.getElementById("wifi");
-        if (wifiEl && data.wifi_rssi != null) {
-            const rssi = data.wifi_rssi;
-            wifiEl.innerText = `${rssi} dBm (${getWifiLabel(rssi)})`;
-            wifiEl.style.color = getWifiColor(rssi);
-        }
+
+try {
+    if (wifiEl && data.wifi_rssi != null) {
+        const rssi = data.wifi_rssi;
+
+        const label = getWifiLabel ? getWifiLabel(rssi) : "";
+        const color = getWifiColor ? getWifiColor(rssi) : "#ffffff";
+
+        wifiEl.innerText = `${rssi} dBm ${label ? "(" + label + ")" : ""}`;
+        wifiEl.style.color = color;
+    } else if (wifiEl) {
+        wifiEl.innerText = "-";
+    }
+} catch (e) {
+    console.log("wifi error:", e);
+}
 
         /* LOCKDOWN */
         document.getElementById("lockdownState").innerText =
