@@ -48,14 +48,23 @@ main {
     margin: auto;
 }
 
-/* ✅ GRID tvarkingas */
 
-cards {
+
+/* ✅ VISADA 3 STULPELIAI */
+.cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-    align-items: stretch;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
 }
+
+/* ✅ mobile fallback */
+@media (max-width: 700px) {
+    .cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+
 
 
 /* GLASS */
@@ -70,14 +79,14 @@ cards {
     box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
 
-/* ✅ FIX: vieta gauge */
 
-card {
+/* ✅ kortelės struktūra */
+.card {
     position: relative;
-    padding: 16px;
-    padding-right: 80px;
+    padding: 14px;
+    padding-right: 70px; /* vieta gauge */
 
-    min-height: 110px;
+    min-height: 90px;
 
     display: flex;
     flex-direction: column;
@@ -85,23 +94,30 @@ card {
 }
 
 
+
 .cards > .card {
     width: 100%;
 }
 
 /* TEXT */
+
 .card h2 {
-    margin-bottom: 6px;
-    font-size: 14px;
+    font-size: 13px;
     color: rgba(255,255,255,0.7);
+    margin: 0;
 }
+
+
 
 .value {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: bold;
+    margin-top: 4px;
 }
 
+
 /* ✅ GAUGE teisingas */
+
 
 .card canvas {
     position: absolute;
@@ -109,9 +125,10 @@ card {
     top: 50%;
     transform: translateY(-50%);
 
-    width: 60px;
-    height: 60px;
+    width: 55px;
+    height: 55px;
 }
+
 
 
 /* ICON */
