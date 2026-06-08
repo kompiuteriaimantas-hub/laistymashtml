@@ -238,6 +238,6 @@ window.addEventListener("DOMContentLoaded", () => {
     fetchStatus();
     updateMonthlyUsageUI();
 
-    setInterval(fetchStatus, 2000);
+    setInterval(fetchStatus, 1000);
     setInterval(updateMonthlyUsageUI, 60000);
 });
