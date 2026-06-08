@@ -1,6 +1,7 @@
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
+
 const SUPABASE_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
 function sbHeaders(extra = {}) {
     return {
@@ -11,64 +12,51 @@ function sbHeaders(extra = {}) {
 }
 
 /* -------------------------------
-   🔥 GAUGES
+   🕒 ONLINE FORMAT
 --------------------------------*/
-let gaugeMoisture, gaugeTemp, gaugePressure;
+function formatLastSeen(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
 
-function createGradientGauge(canvasId, maxValue, colors) {
-    const opts = {
-        angle: 0,
-        lineWidth: 0.25,
-        radiusScale: 0.9,
-        pointer: {
-            length: 0.55,
-            strokeWidth: 0.04,
-            color: "#ffffff"
-        },
-        renderTicks: { divisions: 0 }
-    };
-
-    const target = document.getElementById(canvasId);
-    const gauge = new Gauge(target).setOptions(opts);
-
-    gauge.maxValue = maxValue;
-    gauge.setMinValue(0);
-    gauge.animationSpeed = 32;
-
-    const ctx = target.getContext("2d");
-    const gradient = ctx.createLinearGradient(0, 0, 100, 0);
-
-    colors.forEach((c, i) => {
-        gradient.addColorStop(i / (colors.length - 1), c);
-    });
-
-    opts.colorStart = gradient;
-    opts.colorStop = gradient;
-
-    gauge.set(0);
-    return gauge;
+    if (s < 60) return `Online prieš ${s}s`;
+    if (m < 60) return `Online prieš ${m} min`;
+    return `Online prieš ${h} val`;
 }
 
 /* -------------------------------
-   MĖNESIO ISTORIJA
+   📊 MĖNESIO ISTORIJA
 --------------------------------*/
 async function fetchMonthlyUsage() {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    try {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-    const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
-        { headers: sbHeaders() }
-    );
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/usage_history?created_at=gte.${firstDay}&select=*`,
+            { headers: sbHeaders() }
+        );
 
-    return await res.json();
+        return await res.json();
+    } catch (e) {
+        console.log("Monthly error:", e);
+        return [];
+    }
 }
 
 async function updateMonthlyUsageUI() {
     const data = await fetchMonthlyUsage();
 
+    if (!data || !Array.isArray(data)) {
+        document.getElementById("monthlyUsage").innerText =
+            "Šio mėnesio sunaudota: 0 KB";
+        return;
+    }
+
     let total = 0;
-    for (const row of data) total += row.usage_bytes;
+    for (const row of data) {
+        total += row.usage_bytes || 0;
+    }
 
     const kb = total / 1024;
     const mb = kb / 1024;
@@ -80,7 +68,7 @@ async function updateMonthlyUsageUI() {
 }
 
 /* -------------------------------
-   STATUSO FUNKCIJA
+   STATUS
 --------------------------------*/
 async function fetchStatus() {
     try {
@@ -97,55 +85,68 @@ async function fetchStatus() {
             return;
         }
 
-        // ONLINE logika
         const now = Date.now();
-        let ts = data.updated_at.replace(/\.\d+/, "") + "Z";
-        const updated = new Date(ts).getTime();
+        const updated = new Date(
+            data.updated_at.replace(/\.\d+/, "") + "Z"
+        ).getTime();
 
-        if (isNaN(updated) || now - updated > 60000) {
-            setOffline();
-        } else {
-            setOnline();
+        const diff = now - updated;
+
+        let isOffline = false;
+        if (isNaN(updated) || diff > 120000) {
+            isOffline = true;
         }
 
-        // UI
-        document.getElementById("moisture").innerText = data.moisture_percent;
-        document.getElementById("temperature").innerText = data.temperature_c;
-        document.getElementById("pressure").innerText = data.pressure_hpa;
-        document.getElementById("wifi").innerText = data.wifi_rssi;
+        // ✅ VISADA rodom paskutinius duomenis
+        document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
+        document.getElementById("temperature").innerText = data.temperature_c ?? "-";
+        document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
 
-        document.getElementById("relayState").innerText =
-            data.relay ? "Įjungta" : "Išjungta";
+        const wifiEl = document.getElementById("wifi");
+        if (wifiEl) wifiEl.innerText = data.wifi_rssi ?? "-";
 
-        document.getElementById("lockdownState").innerText =
-            data.lockdown ? "TAIP" : "NE";
+        const lockEl = document.getElementById("lockdownState");
+        if (lockEl) lockEl.innerText = data.lockdown ? "TAIP" : "NE";
 
         const usageBytes = data.usage_bytes || 0;
         const kb = usageBytes / 1024;
         const mb = kb / 1024;
 
-        document.getElementById("usage").innerText =
-            mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
+        const usageEl = document.getElementById("usage");
+        if (usageEl) {
+            usageEl.innerText =
+                mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
+        }
 
-        // 🔥 GAUGE UPDATE
-        if (gaugeMoisture) gaugeMoisture.set(data.moisture_percent);
-        if (gaugeTemp) gaugeTemp.set(data.temperature_c);
-        if (gaugePressure) gaugePressure.set(data.pressure_hpa);
-
-        // RELAY UI
+        // ✅ RELAY
         const btn = document.getElementById("relayBtn");
-        const status = document.getElementById("relayStatus");
+        const relayStateEl = document.getElementById("relayState");
 
-        if (data.relay) {
-            btn.innerText = "Išjungti";
-            btn.classList.add("active");
-            btn.classList.remove("off");
-            if (status) status.classList.add("active");
+        if (btn && relayStateEl) {
+            if (data.relay) {
+                btn.innerText = "Išjungti";
+                btn.classList.add("active");
+                btn.classList.remove("off");
+                relayStateEl.innerText = "Įjungta";
+            } else {
+                btn.innerText = "Įjungti";
+                btn.classList.remove("active");
+                btn.classList.add("off");
+                relayStateEl.innerText = "Išjungta";
+            }
+        }
+
+        // ✅ ONLINE / LOCKDOWN
+        const el = document.getElementById("onlineStatus");
+
+        if (data.lockdown) {
+            el.innerText = "LOCKDOWN";
+            el.style.color = "#ff4444";
+            el.style.textShadow = "0 0 10px #ff4444";
+        } else if (isOffline) {
+            setOffline();
         } else {
-            btn.innerText = "Įjungti";
-            btn.classList.remove("active");
-            btn.classList.add("off");
-            if (status) status.classList.remove("active");
+            setOnline(diff);
         }
 
     } catch (err) {
@@ -155,11 +156,11 @@ async function fetchStatus() {
 }
 
 /* -------------------------------
-   STATUS
+   UI
 --------------------------------*/
-function setOnline() {
+function setOnline(diff) {
     const el = document.getElementById("onlineStatus");
-    el.innerText = "ONLINE";
+    el.innerText = formatLastSeen(diff);
     el.style.color = "#00ff88";
     el.style.textShadow = "0 0 8px #00ff88";
 }
@@ -168,59 +169,75 @@ function setOffline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "OFFLINE";
     el.style.color = "#ffcc33";
-    el.style.textShadow = "0 0 5px #ffcc33";
 }
 
 /* -------------------------------
-   KOMANDOS
+   RELAY COMMAND
 --------------------------------*/
 async function sendRelayCommand(state) {
     await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
         method: "POST",
-        headers: sbHeaders({ "Content-Type": "application/json", Prefer: "return=minimal" }),
+        headers: sbHeaders({
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+        }),
         body: JSON.stringify({ relay_state: state })
     });
 }
 
 /* -------------------------------
-   STARTAS
+   🔥 RESET LOCKDOWN
+--------------------------------*/
+async function resetLockdown() {
+    await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
+        method: "POST",
+        headers: sbHeaders({
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+        }),
+        body: JSON.stringify({ reset_lockdown: true })
+    });
+}
+
+/* -------------------------------
+   START
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
 
-    // 🔥 CREATE GAUGES
-    gaugeMoisture = createGradientGauge("gaugeMoisture", 100, [
-        "#e53935", "#fbc02d", "#43a047"
-    ]);
-
-    gaugeTemp = createGradientGauge("gaugeTemp", 50, [
-        "#2196f3", "#00e5ff", "#e53935"
-    ]);
-
-    gaugePressure = createGradientGauge("gaugePressure", 1100, [
-        "#9c27b0", "#03a9f4"
-    ]);
-
-    // RELAY CLICK
+    // ✅ RELAY
     document.getElementById("relayBtn").addEventListener("click", async () => {
         const btn = document.getElementById("relayBtn");
         const isOn = btn.classList.contains("active");
 
         btn.classList.toggle("active");
         btn.classList.toggle("off");
-
-        const status = document.getElementById("relayStatus");
-        if (status) status.classList.toggle("active");
-
         btn.innerText = isOn ? "Įjungti" : "Išjungti";
 
         await sendRelayCommand(isOn ? "off" : "on");
 
-        setTimeout(fetchStatus, 800);
+        setTimeout(fetchStatus, 1500);
     });
+
+    // ✅ RESET BUTTON
+    const resetBtn = document.getElementById("btnReset");
+
+    if (resetBtn) {
+        resetBtn.addEventListener("click", async () => {
+
+            resetBtn.innerText = "...";
+
+            await resetLockdown();
+
+            setTimeout(() => {
+                fetchStatus();
+                resetBtn.innerText = "Atstatyti sistemą";
+            }, 2500);
+        });
+    }
 
     fetchStatus();
     updateMonthlyUsageUI();
 
-    setInterval(fetchStatus, 1500);
+    setInterval(fetchStatus, 2000);
     setInterval(updateMonthlyUsageUI, 60000);
 });
