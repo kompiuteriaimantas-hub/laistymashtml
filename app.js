@@ -11,11 +11,19 @@ function sbHeaders(extra = {}) {
 }
 
 /* -------------------------------
-   🔥 GAUGES SU SKALĖM
+   🔥 GAUGES SU SKALĖMIS
 --------------------------------*/
 let gaugeMoisture, gaugeTemp, gaugePressure;
 
 function createGauge(canvasId, min, max, zones, labels) {
+    const target = document.getElementById(canvasId);
+
+    // ✅ safety (kad nelūžtų)
+    if (!target || typeof Gauge === "undefined") {
+        console.warn("Gauge missing:", canvasId);
+        return null;
+    }
+
     const opts = {
         angle: 0,
         lineWidth: 0.22,
@@ -37,7 +45,6 @@ function createGauge(canvasId, min, max, zones, labels) {
         }
     };
 
-    const target = document.getElementById(canvasId);
     const gauge = new Gauge(target).setOptions(opts);
 
     gauge.maxValue = max;
@@ -105,7 +112,7 @@ async function fetchStatus() {
             setOnline();
         }
 
-        // UI
+        // ✅ UI update
         document.getElementById("moisture").innerText = data.moisture_percent;
         document.getElementById("temperature").innerText = data.temperature_c;
         document.getElementById("pressure").innerText = data.pressure_hpa;
@@ -124,12 +131,12 @@ async function fetchStatus() {
         document.getElementById("usage").innerText =
             mb >= 1 ? mb.toFixed(2) + " MB" : kb.toFixed(1) + " KB";
 
-        // 🔥 UPDATE GAUGES
+        // ✅ GAUGES UPDATE
         if (gaugeMoisture) gaugeMoisture.set(data.moisture_percent);
         if (gaugeTemp) gaugeTemp.set(data.temperature_c);
         if (gaugePressure) gaugePressure.set(data.pressure_hpa);
 
-        // RELAY UI
+        // ✅ RELAY UI
         const btn = document.getElementById("relayBtn");
         const status = document.getElementById("relayStatus");
 
@@ -221,7 +228,7 @@ window.addEventListener("DOMContentLoaded", () => {
         [600, 1000, 1400, 2000]
     );
 
-    // RELAY
+    // ✅ RELAY CLICK
     document.getElementById("relayBtn").addEventListener("click", async () => {
         const btn = document.getElementById("relayBtn");
         const isOn = btn.classList.contains("active");
@@ -245,3 +252,4 @@ window.addEventListener("DOMContentLoaded", () => {
     setInterval(fetchStatus, 1500);
     setInterval(updateMonthlyUsageUI, 60000);
 });
+``
