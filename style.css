@@ -5,18 +5,34 @@
 body {
     margin: 0;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #eef2f3;
-    color: #222;
+    color: #fff;
+
+    /* ✅ TU ČIA PASIKEISI FOTO */
+    background: url("bg.jpg") no-repeat center/cover fixed;
 }
 
+/* OVERLAY kad tekstas būtų skaitomas */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(6px);
+    z-index: -1;
+}
+
+/* HEADER */
 .header {
-    background: #2e7d32;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(14px);
     color: white;
-    padding: 12px 16px;
+    padding: 14px 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    border-radius: 18px;
+    margin: 12px;
 }
 
 .header h1 {
@@ -29,33 +45,34 @@ body {
     opacity: 0.9;
 }
 
-.usage-box {
-    text-align: right;
-    font-size: 13px;
-}
-
-.usage-box span:last-child {
-    font-weight: bold;
-    display: block;
-}
-
 .reset-btn {
-    margin-top: 4px;
-    padding: 4px 10px;
-    font-size: 12px;
-    background: #d32f2f;
-    color: white;
+    background: #e53935;
     border: none;
-    border-radius: 6px;
-    cursor: pointer;
+    border-radius: 10px;
+    color: white;
+    padding: 6px 12px;
 }
 
+/* MAIN */
 main {
-    padding: 12px;
+    padding: 10px;
     max-width: 900px;
-    margin: 0 auto;
+    margin: auto;
 }
 
+/* GLASS CARD */
+.card,
+.relay-section,
+.calibration {
+    background: rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+/* GRID */
 .cards {
     display: flex;
     flex-wrap: wrap;
@@ -63,71 +80,130 @@ main {
 }
 
 .card {
-    background: white;
-    padding: 12px;
-    border-radius: 10px;
     flex: 1 1 100%;
     position: relative;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    min-width: 0;
 }
 
 @media (min-width: 600px) {
     .card {
-        flex: 1 1 calc(33.333% - 8px);
+        flex: 1 1 calc(33.333% - 10px);
     }
 }
 
+/* TEXT */
 .card h2 {
-    margin: 0;
-    font-size: 16px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.8);
 }
 
 .value {
-    font-size: 28px;
-    font-weight: 600;
+    font-size: 30px;
+    font-weight: bold;
     margin-top: 8px;
 }
 
+/* ICON */
 .icon {
     position: absolute;
-    bottom: 8px;
-    right: 10px;
-    font-size: 24px;
-    opacity: 0.25;
+    bottom: 10px;
+    right: 12px;
+    font-size: 26px;
+    opacity: 0.2;
 }
 
-.relay-section,
-.calibration {
-    background: white;
+/* RELAY SECTION */
+.relay-section {
     margin-top: 12px;
-    padding: 14px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .relay-status {
     margin-bottom: 10px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
 }
 
-.relay-btn {
-    width: 130px;
-    height: 130px;
+/* ✅ LED indikatorius */
+.relay-status::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    margin-right: 10px;
     border-radius: 50%;
-    border: none;
-    background: #43a047;
-    color: white;
-    font-size: 18px;
-    cursor: pointer;
-    display: block;
-    margin: 10px auto;
-    transition: background 0.2s;
-}
-
-.relay-btn.off {
     background: #e53935;
 }
 
+/* ACTIVE LED */
+.relay-status.active::before {
+    background: #43a047;
+    box-shadow: 0 0 10px #43a047;
+}
+
+/* BUTTON */
+.relay-btn {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    margin: 14px auto;
+    display: block;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    transition: 0.2s;
+}
+
+/* OFF */
+.relay-btn.off {
+    background: rgba(255, 80, 80, 0.4);
+}
+
+/* ✅ ACTIVE efektas (MAGIJA 🔥) */
+.relay-btn.active {
+    background: linear-gradient(145deg, #43a047, #2e7d32);
+    box-shadow:
+        0 0 20px rgba(67,160,71,0.7),
+        0 0 60px rgba(67,160,71,0.5);
+    animation: pulseGlow 2s infinite;
+}
+
+/* ✅ glow animacija */
+@keyframes pulseGlow {
+    0% {
+        box-shadow:
+            0 0 10px rgba(67,160,71,0.4),
+            0 0 30px rgba(67,160,71,0.2);
+    }
+    50% {
+        box-shadow:
+            0 0 40px rgba(67,160,71,0.9),
+            0 0 80px rgba(67,160,71,0.6);
+    }
+    100% {
+        box-shadow:
+            0 0 10px rgba(67,160,71,0.4),
+            0 0 30px rgba(67,160,71,0.2);
+    }
+}
+
+/* 💧 "water feel" overlay */
+.relay-btn.active::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent);
+    animation: spin 4s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* EXTRA */
 .relay-extra {
     display: flex;
     justify-content: space-between;
@@ -135,24 +211,23 @@ main {
     margin-top: 6px;
 }
 
+/* CALIBRATION */
 .cal-buttons {
     display: flex;
-    gap: 8px;
-    margin-bottom: 14px;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
 .btn {
-    padding: 8px 14px;
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
     border: none;
-    border-radius: 8px;
     color: white;
-    cursor: pointer;
-    font-size: 14px;
 }
 
 .dry {
-    background: #8d6e63;
+    background: #6d4c41;
 }
 
 .wet {
