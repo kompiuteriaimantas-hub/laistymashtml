@@ -1,16 +1,15 @@
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 
 const SUPABASE_KEY =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSIsImV4cCI6MjA5NjI1MjU4Nn0";
 
+/* ✅ Svarbiausia – BE Authorization */
 function sbHeaders(extra = {}) {
     return {
         apikey: SUPABASE_KEY,
-        Authorization: "Bearer " + SUPABASE_KEY,
         ...extra
     };
 }
-
 
 /* -------------------------------
    WIFI
@@ -95,24 +94,19 @@ async function fetchStatus() {
 
         const arr = await res.json();
         const data = arr[0];
-
         if (!data) return;
 
         const now = Date.now();
-
-        const updated = new Date(
-            data.updated_at.replace(/\.\d+/, "") + "Z"
-        ).getTime();
-
+        const updated = new Date(data.updated_at.replace(/\.\d+/, "") + "Z").getTime();
         const diff = now - updated;
         const isOffline = diff > 120000;
 
-        // ✅ SENSORIAI
+        // SENSORIAI
         document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
         document.getElementById("temperature").innerText = data.temperature_c ?? "-";
         document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
 
-        // ✅ WIFI
+        // WIFI
         const wifiEl = document.getElementById("wifi");
         if (wifiEl && data.wifi_rssi != null) {
             const rssi = data.wifi_rssi;
@@ -138,11 +132,11 @@ async function fetchStatus() {
             }
         }
 
-        // ✅ LOCKDOWN
+        // LOCKDOWN
         const lockEl = document.getElementById("lockdownState");
         if (lockEl) lockEl.innerText = data.lockdown ? "TAIP" : "NE";
 
-        // ✅ RELAY
+        // RELAY
         const btn = document.getElementById("relayBtn");
         const stateEl = document.getElementById("relayState");
 
@@ -158,7 +152,7 @@ async function fetchStatus() {
             }
         }
 
-        // ✅ STATUS (ONLINE/OFFLINE)
+        // ONLINE STATUS
         const el = document.getElementById("onlineStatus");
 
         if (!el) return;
@@ -209,6 +203,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
         btn.innerText = "...";
         await sendRelayCommand(isOn ? "off" : "on");
+
         setTimeout(fetchStatus, 1000);
     });
 
@@ -217,6 +212,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (resetBtn) {
         resetBtn.addEventListener("click", async () => {
             resetBtn.innerText = "...";
+
             await resetLockdown();
 
             setTimeout(() => {
