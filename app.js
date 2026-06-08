@@ -162,17 +162,25 @@ async function fetchStatus() {
 /* -------------------------------
    ONLINE / OFFLINE
 --------------------------------*/
+
 function setOnline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "ONLINE";
     el.style.color = "#00ff88";
+
+    // 🔥 GLOW fix
+    el.style.textShadow = "0 0 8px #00ff88, 0 0 16px rgba(0,255,136,0.6)";
 }
+
+
 
 function setOffline() {
     const el = document.getElementById("onlineStatus");
     el.innerText = "OFFLINE";
     el.style.color = "#ffcc33";
+    el.style.textShadow = "0 0 6px rgba(255,204,51,0.5)";
 }
+
 
 /* -------------------------------
    COMMAND
