@@ -55,13 +55,18 @@ async function fetchMonthlyUsage() {
 
         return await res.json();
     } catch (e) {
-        console.log(e);
+        console.log("Monthly error:", e);
         return [];
     }
 }
 
 async function updateMonthlyUsageUI() {
     const data = await fetchMonthlyUsage();
+
+    if (!data || !Array.isArray(data)) {
+        document.getElementById("monthlyUsage").innerText = "Šio mėnesio sunaudota: 0 KB";
+        return;
+    }
 
     let total = 0;
     for (const row of data) {
@@ -93,53 +98,49 @@ async function fetchStatus() {
         if (!data) return;
 
         const now = Date.now();
-        const updated = new Date(data.updated_at).getTime();
-        const diff = now - updated;
 
+        // ✅ FIX – svarbiausia dalis (nebebus OFFLINE bug)
+        const updated = new Date(
+            data.updated_at.replace(/\.\d+/, "") + "Z"
+        ).getTime();
+
+        const diff = now - updated;
         const isOffline = diff > 120000;
 
+        // ✅ SENSORIAI
         document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
         document.getElementById("temperature").innerText = data.temperature_c ?? "-";
         document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
 
-        /* WIFI */
+        // ✅ WIFI
         const wifiEl = document.getElementById("wifi");
+        if (wifiEl && data.wifi_rssi != null) {
+            const rssi = data.wifi_rssi;
+            wifiEl.innerText = `${rssi} dBm (${getWifiLabel(rssi)})`;
+            wifiEl.style.color = getWifiColor(rssi);
+        }
 
-try {
-    if (wifiEl && data.wifi_rssi != null) {
-        const rssi = data.wifi_rssi;
-
-        const label = getWifiLabel ? getWifiLabel(rssi) : "";
-        const color = getWifiColor ? getWifiColor(rssi) : "#ffffff";
-
-        wifiEl.innerText = `${rssi} dBm ${label ? "(" + label + ")" : ""}`;
-        wifiEl.style.color = color;
-    } else if (wifiEl) {
-        wifiEl.innerText = "-";
-    }
-} catch (e) {
-    console.log("wifi error:", e);
-}
-
-        /* LOCKDOWN */
+        // ✅ LOCKDOWN
         document.getElementById("lockdownState").innerText =
             data.lockdown ? "TAIP" : "NE";
 
-        /* RELAY */
+        // ✅ RELAY
         const btn = document.getElementById("relayBtn");
         const stateEl = document.getElementById("relayState");
 
-        if (data.relay) {
-            btn.innerText = "Išjungti";
-            btn.classList.add("active");
-            stateEl.innerText = "Įjungta";
-        } else {
-            btn.innerText = "Įjungti";
-            btn.classList.remove("active");
-            stateEl.innerText = "Išjungta";
+        if (btn && stateEl) {
+            if (data.relay) {
+                btn.innerText = "Išjungti";
+                btn.classList.add("active");
+                stateEl.innerText = "Įjungta";
+            } else {
+                btn.innerText = "Įjungti";
+                btn.classList.remove("active");
+                stateEl.innerText = "Išjungta";
+            }
         }
 
-        /* STATUS TEXT */
+        // ✅ STATUS TEXT
         const el = document.getElementById("onlineStatus");
 
         if (data.lockdown) {
@@ -154,7 +155,7 @@ try {
         }
 
     } catch (e) {
-        console.log(e);
+        console.log("Status error:", e);
     }
 }
 
@@ -164,9 +165,7 @@ try {
 async function sendRelayCommand(state) {
     await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
         method: "POST",
-        headers: sbHeaders({
-            "Content-Type": "application/json"
-        }),
+        headers: sbHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ relay_state: state })
     });
 }
@@ -174,9 +173,7 @@ async function sendRelayCommand(state) {
 async function resetLockdown() {
     await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
         method: "POST",
-        headers: sbHeaders({
-            "Content-Type": "application/json"
-        }),
+        headers: sbHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ reset_lockdown: true })
     });
 }
@@ -191,9 +188,7 @@ window.addEventListener("DOMContentLoaded", () => {
         const isOn = btn.classList.contains("active");
 
         btn.innerText = "...";
-
         await sendRelayCommand(isOn ? "off" : "on");
-
         setTimeout(fetchStatus, 1000);
     });
 
@@ -202,7 +197,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (resetBtn) {
         resetBtn.addEventListener("click", async () => {
             resetBtn.innerText = "...";
-
             await resetLockdown();
 
             setTimeout(() => {
