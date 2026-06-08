@@ -6,7 +6,6 @@ body {
     margin: 0;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     color: #fff;
-
     background: url("bg.jpg") no-repeat center/cover fixed;
 }
 
@@ -39,6 +38,7 @@ body::before {
 
 .status {
     font-size: 14px;
+    transition: all 0.3s ease;
 }
 
 /* MAIN */
@@ -69,6 +69,7 @@ main {
 .card {
     flex: 1 1 100%;
     position: relative;
+    overflow: hidden;
 }
 
 @media (min-width: 600px) {
@@ -85,6 +86,8 @@ main {
 .value {
     font-size: 30px;
     font-weight: bold;
+    position: relative;
+    z-index: 2;
 }
 
 /* icon */
@@ -94,6 +97,20 @@ main {
     right: 12px;
     opacity: 0.2;
     font-size: 24px;
+}
+
+/* ✅ GAUGE CANVAS (FIX SIZE 🔥) */
+.card canvas {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+
+    width: 60px !important;
+    height: 60px !important;
+
+    opacity: 0.85;
+
+    pointer-events: none;
 }
 
 /* RELAY */
@@ -117,7 +134,6 @@ main {
     background: #e53935;
 }
 
-/* ACTIVE LED */
 .relay-status.active::before {
     background: #43a047;
     box-shadow: 0 0 12px #43a047;
@@ -141,7 +157,7 @@ main {
     transition: all 0.2s ease;
 }
 
-/* paspaudimo efektas */
+/* click */
 .relay-btn:active {
     transform: scale(0.9);
 }
@@ -151,7 +167,7 @@ main {
     background: rgba(255, 80, 80, 0.4);
 }
 
-/* ✅ ACTIVE (čia visa magija 🔥) */
+/* ✅ ACTIVE */
 .relay-btn.active {
     background: linear-gradient(145deg, #43a047, #2e7d32);
 
@@ -162,7 +178,6 @@ main {
     animation: pulseGlow 2s infinite;
 }
 
-/* glow animacija */
 @keyframes pulseGlow {
     0% {
         box-shadow:
@@ -187,9 +202,7 @@ main {
     position: absolute;
     inset: 0;
     border-radius: 50%;
-
     background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.25), transparent);
-
     animation: spin 4s linear infinite;
 }
 
