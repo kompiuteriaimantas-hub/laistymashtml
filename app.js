@@ -97,7 +97,7 @@ async function fetchStatus() {
             isOffline = true;
         }
 
-        // ✅ VISADA rodom duomenis
+        // ✅ VISADA rodom paskutinius duomenis
         document.getElementById("moisture").innerText = data.moisture_percent ?? "-";
         document.getElementById("temperature").innerText = data.temperature_c ?? "-";
         document.getElementById("pressure").innerText = data.pressure_hpa ?? "-";
@@ -136,7 +136,7 @@ async function fetchStatus() {
             }
         }
 
-        // ✅ ONLINE + LOCKDOWN LOGIKA
+        // ✅ ONLINE / LOCKDOWN
         const el = document.getElementById("onlineStatus");
 
         if (data.lockdown) {
@@ -172,7 +172,7 @@ function setOffline() {
 }
 
 /* -------------------------------
-   RELAY
+   RELAY COMMAND
 --------------------------------*/
 async function sendRelayCommand(state) {
     await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
@@ -186,10 +186,25 @@ async function sendRelayCommand(state) {
 }
 
 /* -------------------------------
+   🔥 RESET LOCKDOWN
+--------------------------------*/
+async function resetLockdown() {
+    await fetch(`${SUPABASE_URL}/rest/v1/commands`, {
+        method: "POST",
+        headers: sbHeaders({
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+        }),
+        body: JSON.stringify({ reset_lockdown: true })
+    });
+}
+
+/* -------------------------------
    START
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
 
+    // ✅ RELAY
     document.getElementById("relayBtn").addEventListener("click", async () => {
         const btn = document.getElementById("relayBtn");
         const isOn = btn.classList.contains("active");
@@ -203,10 +218,26 @@ window.addEventListener("DOMContentLoaded", () => {
         setTimeout(fetchStatus, 1500);
     });
 
+    // ✅ RESET BUTTON
+    const resetBtn = document.getElementById("btnReset");
+
+    if (resetBtn) {
+        resetBtn.addEventListener("click", async () => {
+
+            resetBtn.innerText = "...";
+
+            await resetLockdown();
+
+            setTimeout(() => {
+                fetchStatus();
+                resetBtn.innerText = "Atstatyti sistemą";
+            }, 2500);
+        });
+    }
+
     fetchStatus();
     updateMonthlyUsageUI();
 
     setInterval(fetchStatus, 2000);
     setInterval(updateMonthlyUsageUI, 60000);
 });
-``
