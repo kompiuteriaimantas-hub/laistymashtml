@@ -10,6 +10,26 @@ function sbHeaders(extra = {}) {
         ...extra
     };
 }
+async function login() {
+    const pw = document.getElementById("pwInput").value;
+
+    const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/auth?select=password&limit=1`,
+        { headers: sbHeaders() }
+    );
+
+    const arr = await res.json();
+    if (!arr.length) return;
+
+    if (pw === arr[0].password) {
+        // Sėkmingas prisijungimas
+        localStorage.setItem("auth_ok", "1");
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("app").style.display = "block";
+    } else {
+        document.getElementById("loginError").innerText = "Neteisingas slaptažodis";
+    }
+}
 
 /* -------------------------------
    🕒 ONLINE FORMAT
@@ -205,6 +225,25 @@ async function resetLockdown() {
    START
 --------------------------------*/
 window.addEventListener("DOMContentLoaded", () => {
+
+    window.addEventListener("DOMContentLoaded", () => {
+
+    // Tikrinam ar jau prisijungęs
+    if (localStorage.getItem("auth_ok") === "1") {
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("app").style.display = "block";
+    } else {
+        document.getElementById("loginBox").style.display = "block";
+        document.getElementById("app").style.display = "none";
+        return; // sustabdom UI veikimą kol neprisijungė
+    }
+
+    // tavo esamas kodas:
+    fetchStatus();
+    updateMonthlyUsageUI();
+    setInterval(fetchStatus, 1000);
+    setInterval(updateMonthlyUsageUI, 60000);
+});
 
     // RELAY
     document.getElementById("relayBtn").addEventListener("click", async () => {
