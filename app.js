@@ -65,7 +65,7 @@ async function fetchStatus() {
     } catch (e) {
         console.log("ERR:", e);
     }
-}
+
 
 
 
