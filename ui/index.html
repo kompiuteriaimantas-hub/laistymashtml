@@ -1,8 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Grafikai</title>
+</head>
+<body>
+
+<canvas id="tempChart"></canvas>
+<canvas id="humChart"></canvas>
+<canvas id="pressChart"></canvas>
+<canvas id="wifiChart"></canvas>
+
+<!-- Chart.js biblioteka (TRŪKO ŠITO) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY =
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
+// 7 dienų filtras
 function sevenDaysAgo() {
     const d = new Date(Date.now() - 7*24*60*60*1000);
     return d.toISOString();
@@ -34,7 +51,7 @@ async function loadCharts() {
 
     const labels = status.map(r => r.updated_at);
 
-    new Chart(tempChart, {
+    new Chart(document.getElementById("tempChart"), {
         type: "line",
         data: {
             labels,
@@ -46,7 +63,7 @@ async function loadCharts() {
         }
     });
 
-    new Chart(humChart, {
+    new Chart(document.getElementById("humChart"), {
         type: "line",
         data: {
             labels,
@@ -58,7 +75,7 @@ async function loadCharts() {
         }
     });
 
-    new Chart(pressChart, {
+    new Chart(document.getElementById("pressChart"), {
         type: "line",
         data: {
             labels,
@@ -70,7 +87,7 @@ async function loadCharts() {
         }
     });
 
-    new Chart(wifiChart, {
+    new Chart(document.getElementById("wifiChart"), {
         type: "line",
         data: {
             labels,
@@ -86,3 +103,6 @@ async function loadCharts() {
 loadCharts();
 setInterval(loadCharts, 10000);
 </script>
+
+</body>
+</html>
