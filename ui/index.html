@@ -31,9 +31,6 @@
 <h2>WiFi RSSI (dBm)</h2>
 <canvas id="wifiChart"></canvas>
 
-<h2>Duomenų naudojimas (MB)</h2>
-<canvas id="usageChart"></canvas>
-
 <script>
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
@@ -53,7 +50,6 @@ async function fetchTable(table) {
 
 async function loadCharts() {
     const status = await fetchTable("status");
-    const usage = await fetchTable("usage_history");
 
     const labels = status.map(r => r.updated_at);
 
@@ -86,18 +82,6 @@ async function loadCharts() {
         data: {
             labels,
             datasets: [{ label: "dBm", data: status.map(r => r.wifi_rssi), borderColor: "red" }]
-        }
-    });
-
-    new Chart(usageChart, {
-        type: "line",
-        data: {
-            labels: usage.map(r => r.updated_at),
-            datasets: [{
-                label: "MB",
-                data: usage.map(r => (r.usage_bytes / 1024 / 1024).toFixed(2)),
-                borderColor: "lime"
-            }]
         }
     });
 }
