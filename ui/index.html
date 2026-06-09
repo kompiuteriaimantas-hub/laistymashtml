@@ -1,11 +1,16 @@
 <script>
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+const SUPABASE_KEY =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
-// 7 dienų filtras
-const since = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+function sevenDaysAgo() {
+    const d = new Date(Date.now() - 7*24*60*60*1000);
+    return d.toISOString();
+}
 
 async function fetchStatus() {
+    const since = sevenDaysAgo();
+
     const res = await fetch(
         `${SUPABASE_URL}/rest/v1/status?select=*&updated_at=gte.${since}&order=updated_at.asc`,
         {
@@ -15,11 +20,17 @@ async function fetchStatus() {
             }
         }
     );
+
     return res.json();
 }
 
 async function loadCharts() {
     const status = await fetchStatus();
+
+    if (!status || status.length === 0) {
+        console.log("Nėra duomenų");
+        return;
+    }
 
     const labels = status.map(r => r.updated_at);
 
