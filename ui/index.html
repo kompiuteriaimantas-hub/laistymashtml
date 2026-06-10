@@ -1,17 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Grafikai</title>
-</head>
-<body>
-
-<canvas id="tempChart"></canvas>
-<canvas id="humChart"></canvas>
-<canvas id="pressChart"></canvas>
-<canvas id="wifiChart"></canvas>
-
-<!-- Chart.js biblioteka (TRŪKO ŠITO) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
@@ -20,10 +6,8 @@ const SUPABASE_KEY =
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
 
-// 7 dienų filtras
 function sevenDaysAgo() {
-    const d = new Date(Date.now() - 7*24*60*60*1000);
-    return d.toISOString();
+    return new Date(Date.now() - 7*24*60*60*1000).toISOString();
 }
 
 async function fetchStatus() {
@@ -44,15 +28,13 @@ async function fetchStatus() {
 
 async function loadCharts() {
     const status = await fetchStatus();
-
-    if (!status || status.length === 0) {
-        console.log("Nėra duomenų");
-        return;
-    }
+    if (!status.length) return;
 
     const labels = status.map(r => r.updated_at);
 
-    new Chart(document.getElementById("tempChart"), {
+    // TEMP
+    if (window.tempChartObj) window.tempChartObj.destroy();
+    window.tempChartObj = new Chart(tempChart, {
         type: "line",
         data: {
             labels,
@@ -64,7 +46,9 @@ async function loadCharts() {
         }
     });
 
-    new Chart(document.getElementById("humChart"), {
+    // HUM
+    if (window.humChartObj) window.humChartObj.destroy();
+    window.humChartObj = new Chart(humChart, {
         type: "line",
         data: {
             labels,
@@ -76,7 +60,9 @@ async function loadCharts() {
         }
     });
 
-    new Chart(document.getElementById("pressChart"), {
+    // PRESS
+    if (window.pressChartObj) window.pressChartObj.destroy();
+    window.pressChartObj = new Chart(pressChart, {
         type: "line",
         data: {
             labels,
@@ -88,7 +74,9 @@ async function loadCharts() {
         }
     });
 
-    new Chart(document.getElementById("wifiChart"), {
+    // WIFI
+    if (window.wifiChartObj) window.wifiChartObj.destroy();
+    window.wifiChartObj = new Chart(wifiChart, {
         type: "line",
         data: {
             labels,
@@ -104,6 +92,3 @@ async function loadCharts() {
 loadCharts();
 setInterval(loadCharts, 10000);
 </script>
-
-</body>
-</html>
