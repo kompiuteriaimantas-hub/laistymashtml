@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Grafikai</title>
+    <title>Šiandienos grafikai</title>
 </head>
 <body>
 
@@ -19,16 +19,18 @@ const SUPABASE_KEY =
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 
 
-// 7 dienų filtras
-function sevenDaysAgo() {
-    return new Date(Date.now() - 7*24*60*60*1000).toISOString();
+// Tik šiandienos data 00:00:00
+function todayStart() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
 }
 
-async function fetchStatus() {
-    const since = sevenDaysAgo();
+async function fetchStatusToday() {
+    const start = todayStart();
 
     const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/status?select=*&updated_at=gte.${since}&order=updated_at.asc`,
+        `${SUPABASE_URL}/rest/v1/status?select=*&updated_at=gte.${start}&order=updated_at.asc`,
         {
             headers: {
                 apikey: SUPABASE_KEY,
@@ -41,9 +43,9 @@ async function fetchStatus() {
 }
 
 async function loadCharts() {
-    const status = await fetchStatus();
+    const status = await fetchStatusToday();
     if (!status.length) {
-        console.log("Nėra duomenų");
+        console.log("Šiandien nėra duomenų");
         return;
     }
 
