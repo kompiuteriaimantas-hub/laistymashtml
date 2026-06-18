@@ -378,18 +378,6 @@ const btnResetData = document.getElementById("btnResetData");
 
 let appInitialized = false;
 
-function formatDateInput(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function toLocalHour(ts) {
-  const d = new Date(ts);
-  return d.toTimeString().slice(0, 5);
-}
-
 function setLockdownBadge(isLockdown) {
   if (isLockdown) {
     badgeLockdown.classList.remove("badge-lockdown-no");
@@ -473,44 +461,17 @@ async function loadDayData(dateStr) {
   data.forEach((row) => {
     const tr = document.createElement("tr");
 
-    const tdHour = document.createElement("td");
-    tdHour.textContent = toLocalHour(row.timestamp);
+    tr.innerHTML = `
+      <td>${new Date(row.timestamp).toTimeString().slice(0,5)}</td>
+      <td>${row.temp?.toFixed(1) ?? "–"}</td>
+      <td>${row.moisture?.toFixed(1) ?? "–"}</td>
+      <td>${row.pressure?.toFixed(0) ?? "–"}</td>
+      <td class="text-right">${(row.data_used_mb ?? 0).toFixed(3)}</td>
+      <td><span class="pill ${row.lockdown ? "pill-bad" : "pill-ok"}">${row.lockdown ? "Taip" : "Ne"}</span></td>
+      <td><span class="pill ${row.offline ? "pill-bad" : "pill-ok"}">${row.offline ? "Taip" : "Ne"}</span></td>
+    `;
 
-    const tdTemp = document.createElement("td");
-    tdTemp.textContent = row.temp != null ? row.temp.toFixed(1) : "–";
-
-    const tdMoist = document.createElement("td");
-    tdMoist.textContent = row.moisture != null ? row.moisture.toFixed(1) : "–";
-
-    const tdPress = document.createElement("td");
-    tdPress.textContent = row.pressure != null ? row.pressure.toFixed(0) : "–";
-
-    const tdData = document.createElement("td");
-    tdData.className = "text-right";
-    const mb = row.data_used_mb != null ? Number(row.data_used_mb) : 0;
-    totalMb += mb;
-    tdData.textContent = mb ? mb.toFixed(3) : "0.000";
-
-    const tdLock = document.createElement("td");
-    const spanLock = document.createElement("span");
-    spanLock.className = "pill " + (row.lockdown ? "pill-bad" : "pill-ok");
-    spanLock.textContent = row.lockdown ? "Taip" : "Ne";
-    tdLock.appendChild(spanLock);
-
-    const tdOff = document.createElement("td");
-    const spanOff = document.createElement("span");
-    spanOff.className = "pill " + (row.offline ? "pill-bad" : "pill-ok");
-    spanOff.textContent = row.offline ? "Taip" : "Ne";
-    tdOff.appendChild(spanOff);
-
-    tr.appendChild(tdHour);
-    tr.appendChild(tdTemp);
-    tr.appendChild(tdMoist);
-    tr.appendChild(tdPress);
-    tr.appendChild(tdData);
-    tr.appendChild(tdLock);
-    tr.appendChild(tdOff);
-
+    totalMb += row.data_used_mb ?? 0;
     dayTableBody.appendChild(tr);
   });
 
@@ -535,13 +496,10 @@ function initAppOnce() {
   appInitialized = true;
 
   const today = new Date();
-  const todayStr = formatDateInput(today);
-  datePicker.value = todayStr;
-  loadDayData(todayStr);
+  datePicker.value = today.toISOString().slice(0,10);
+  loadDayData(datePicker.value);
 
-  datePicker.addEventListener("change", (e) => {
-    if (e.target.value) loadDayData(e.target.value);
-  });
+  datePicker.onchange = () => loadDayData(datePicker.value);
 
   btnUnblock.onclick = () => sendCommand({ unblock: true });
   btnRelayToggle.onclick = () => sendCommand({ relay_manual: "toggle" });
@@ -585,6 +543,7 @@ btnLogout.onclick = async () => {
   await checkSession();
 })();
 </script>
+
 
 
 </body>
