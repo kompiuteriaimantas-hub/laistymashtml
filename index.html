@@ -422,7 +422,7 @@ async function checkRealtimeStatus() {
     const now = new Date();
     const diffSec = (now - lastSeen) / 1000;
 
-    setOnlineBadge(diffSec <= 60);
+    setOnlineBadge(diffSec > 60);
     setLockdownBadge(!!data.lockdown);
 
   } catch (e) {
