@@ -347,77 +347,74 @@
     </div>
   </div>
 
-  <!-- Supabase JS -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script>
-    // 🔧 ĮSIRAŠYK SAVO DUOMENIS
-    const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI"; // public anon key, ne service_role
-    const ESP_ID = "esp1";
+<script>
+const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+const ESP_ID = "esp1";
 
-    const { createClient } = supabase;
-    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const authDiv = document.getElementById("auth");
-    const appDiv = document.getElementById("app");
+const authDiv = document.getElementById("auth");
+const appDiv = document.getElementById("app");
 
-    const authEmail = document.getElementById("authEmail");
-    const authPassword = document.getElementById("authPassword");
-    const btnLogin = document.getElementById("btnLogin");
-    const btnLogout = document.getElementById("btnLogout");
+const authEmail = document.getElementById("authEmail");
+const authPassword = document.getElementById("authPassword");
+const btnLogin = document.getElementById("btnLogin");
+const btnLogout = document.getElementById("btnLogout");
 
-    const datePicker = document.getElementById("datePicker");
-    const dayTableBody = document.getElementById("dayTableBody");
-    const daySummary = document.getElementById("daySummary");
-    const badgeOnline = document.getElementById("badge-online");
-    const onlineText = document.getElementById("online-text");
-    const badgeLockdown = document.getElementById("badge-lockdown");
-    const lockdownText = document.getElementById("lockdown-text");
+const datePicker = document.getElementById("datePicker");
+const dayTableBody = document.getElementById("dayTableBody");
+const daySummary = document.getElementById("daySummary");
+const badgeOnline = document.getElementById("badge-online");
+const onlineText = document.getElementById("online-text");
+const badgeLockdown = document.getElementById("badge-lockdown");
+const lockdownText = document.getElementById("lockdown-text");
 
-    const btnUnblock = document.getElementById("btnUnblock");
-    const btnRelayToggle = document.getElementById("btnRelayToggle");
-    const btnResetData = document.getElementById("btnResetData");
+const btnUnblock = document.getElementById("btnUnblock");
+const btnRelayToggle = document.getElementById("btnRelayToggle");
+const btnResetData = document.getElementById("btnResetData");
 
-    let appInitialized = false;
+let appInitialized = false;
 
-    function formatDateInput(d) {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${day}`;
-    }
+function formatDateInput(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
-    function toLocalHour(ts) {
-      const d = new Date(ts);
-      return d.toTimeString().slice(0, 5); // HH:MM
-    }
+function toLocalHour(ts) {
+  const d = new Date(ts);
+  return d.toTimeString().slice(0, 5);
+}
 
-    function setLockdownBadge(isLockdown) {
-      if (isLockdown) {
-        badgeLockdown.classList.remove("badge-lockdown-no");
-        badgeLockdown.classList.add("badge-lockdown-yes");
-        lockdownText.textContent = "Taip";
-      } else {
-        badgeLockdown.classList.remove("badge-lockdown-yes");
-        badgeLockdown.classList.add("badge-lockdown-no");
-        lockdownText.textContent = "Ne";
-      }
-    }
+function setLockdownBadge(isLockdown) {
+  if (isLockdown) {
+    badgeLockdown.classList.remove("badge-lockdown-no");
+    badgeLockdown.classList.add("badge-lockdown-yes");
+    lockdownText.textContent = "Taip";
+  } else {
+    badgeLockdown.classList.remove("badge-lockdown-yes");
+    badgeLockdown.classList.add("badge-lockdown-no");
+    lockdownText.textContent = "Ne";
+  }
+}
 
-    function setOnlineBadge(isOffline) {
-      if (isOffline) {
-        badgeOnline.classList.remove("badge-online");
-        badgeOnline.classList.add("badge-offline");
-        onlineText.textContent = "Offline";
-      } else {
-        badgeOnline.classList.remove("badge-offline");
-        badgeOnline.classList.add("badge-online");
-        onlineText.textContent = "Online";
-      }
-    }
+function setOnlineBadge(isOffline) {
+  if (isOffline) {
+    badgeOnline.classList.remove("badge-online");
+    badgeOnline.classList.add("badge-offline");
+    onlineText.textContent = "Offline";
+  } else {
+    badgeOnline.classList.remove("badge-offline");
+    badgeOnline.classList.add("badge-online");
+    onlineText.textContent = "Online";
+  }
+}
 
-    // --- REALTIME OFFLINE DETEKTAVIMAS ---
-// ESP laikomas OFFLINE, jei paskutinis status įrašas senesnis nei 15 sekundžių
+// --- REALTIME OFFLINE DETEKTAVIMAS ---
 async function checkRealtimeStatus() {
   try {
     const { data, error } = await db
@@ -427,8 +424,7 @@ async function checkRealtimeStatus() {
       .single();
 
     if (error || !data) {
-      console.warn("Nepavyko gauti status:", error);
-      setOnlineBadge(true); // OFFLINE
+      setOnlineBadge(true);
       return;
     }
 
@@ -436,121 +432,105 @@ async function checkRealtimeStatus() {
     const now = new Date();
     const diffSec = (now - lastSeen) / 1000;
 
-    // Jei seniau nei 15 sek → OFFLINE
-    if (diffSec > 15) {
-      setOnlineBadge(true);
-    } else {
-      setOnlineBadge(false);
-    }
-
-    // Lockdown badge
+    setOnlineBadge(diffSec > 15);
     setLockdownBadge(!!data.lockdown);
 
   } catch (e) {
-    console.error("Klaida tikrinant status:", e);
-    setOnlineBadge(true); // OFFLINE
+    setOnlineBadge(true);
   }
 }
 
-    async function loadDayData(dateStr) {
-      dayTableBody.innerHTML = `<tr><td colspan="7">Kraunama...</td></tr>`;
-      daySummary.textContent = "Kraunama...";
+async function loadDayData(dateStr) {
+  dayTableBody.innerHTML = `<tr><td colspan="7">Kraunama...</td></tr>`;
+  daySummary.textContent = "Kraunama...";
 
-      const start = new Date(dateStr + "T00:00:00Z");
-const end = new Date(dateStr + "T23:59:59Z");
+  const start = new Date(dateStr + "T00:00:00Z");
+  const end = new Date(dateStr + "T23:59:59Z");
 
-      const { data, error } = await db
-        .from("status_log") // tavo istorijos lentelė
-        .select("*")
-        .eq("id", ESP_ID)
-        .gte("timestamp", start.toISOString())
-        .lte("timestamp", end.toISOString())
-        .order("timestamp", { ascending: true });
+  const { data, error } = await db
+    .from("status_log")
+    .select("*")
+    .eq("id", ESP_ID)
+    .gte("timestamp", start.toISOString())
+    .lte("timestamp", end.toISOString())
+    .order("timestamp", { ascending: true });
 
-      if (error) {
-        console.error(error);
-        dayTableBody.innerHTML = `<tr><td colspan="7">Klaida kraunant duomenis</td></tr>`;
-        daySummary.textContent = "Klaida";
-        return;
-      }
+  if (error) {
+    dayTableBody.innerHTML = `<tr><td colspan="7">Klaida kraunant duomenis</td></tr>`;
+    daySummary.textContent = "Klaida";
+    return;
+  }
 
-      if (!data || data.length === 0) {
-        dayTableBody.innerHTML = `<tr><td colspan="7">Nėra duomenų šiai dienai</td></tr>`;
-        daySummary.textContent = "Nėra duomenų";
-        setLockdownBadge(false);
-        setOnlineBadge(false);
-        return;
-      }
+  if (!data || data.length === 0) {
+    dayTableBody.innerHTML = `<tr><td colspan="7">Nėra duomenų šiai dienai</td></tr>`;
+    daySummary.textContent = "Nėra duomenų";
+    return;
+  }
 
-      dayTableBody.innerHTML = "";
-      let totalMb = 0;
+  dayTableBody.innerHTML = "";
+  let totalMb = 0;
 
-      data.forEach((row) => {
-        const tr = document.createElement("tr");
+  data.forEach((row) => {
+    const tr = document.createElement("tr");
 
-        const tdHour = document.createElement("td");
-        tdHour.textContent = toLocalHour(row.timestamp);
+    const tdHour = document.createElement("td");
+    tdHour.textContent = toLocalHour(row.timestamp);
 
-        const tdTemp = document.createElement("td");
-        tdTemp.textContent = row.temp != null ? row.temp.toFixed(1) : "–";
+    const tdTemp = document.createElement("td");
+    tdTemp.textContent = row.temp != null ? row.temp.toFixed(1) : "–";
 
-        const tdMoist = document.createElement("td");
-        tdMoist.textContent = row.moisture != null ? row.moisture.toFixed(1) : "–";
+    const tdMoist = document.createElement("td");
+    tdMoist.textContent = row.moisture != null ? row.moisture.toFixed(1) : "–";
 
-        const tdPress = document.createElement("td");
-        tdPress.textContent = row.pressure != null ? row.pressure.toFixed(0) : "–";
+    const tdPress = document.createElement("td");
+    tdPress.textContent = row.pressure != null ? row.pressure.toFixed(0) : "–";
 
-        const tdData = document.createElement("td");
-        tdData.className = "text-right";
-        const mb = row.data_used_mb != null ? Number(row.data_used_mb) : 0;
-        totalMb += mb;
-        tdData.textContent = mb ? mb.toFixed(3) : "0.000";
+    const tdData = document.createElement("td");
+    tdData.className = "text-right";
+    const mb = row.data_used_mb != null ? Number(row.data_used_mb) : 0;
+    totalMb += mb;
+    tdData.textContent = mb ? mb.toFixed(3) : "0.000";
 
-        const tdLock = document.createElement("td");
-        const spanLock = document.createElement("span");
-        spanLock.className = "pill " + (row.lockdown ? "pill-bad" : "pill-ok");
-        spanLock.textContent = row.lockdown ? "Taip" : "Ne";
-        tdLock.appendChild(spanLock);
+    const tdLock = document.createElement("td");
+    const spanLock = document.createElement("span");
+    spanLock.className = "pill " + (row.lockdown ? "pill-bad" : "pill-ok");
+    spanLock.textContent = row.lockdown ? "Taip" : "Ne";
+    tdLock.appendChild(spanLock);
 
-        const tdOff = document.createElement("td");
-        const spanOff = document.createElement("span");
-        spanOff.className = "pill " + (row.offline ? "pill-bad" : "pill-ok");
-        spanOff.textContent = row.offline ? "Taip" : "Ne";
-        tdOff.appendChild(spanOff);
+    const tdOff = document.createElement("td");
+    const spanOff = document.createElement("span");
+    spanOff.className = "pill " + (row.offline ? "pill-bad" : "pill-ok");
+    spanOff.textContent = row.offline ? "Taip" : "Ne";
+    tdOff.appendChild(spanOff);
 
-        tr.appendChild(tdHour);
-        tr.appendChild(tdTemp);
-        tr.appendChild(tdMoist);
-        tr.appendChild(tdPress);
-        tr.appendChild(tdData);
-        tr.appendChild(tdLock);
-        tr.appendChild(tdOff);
+    tr.appendChild(tdHour);
+    tr.appendChild(tdTemp);
+    tr.appendChild(tdMoist);
+    tr.appendChild(tdPress);
+    tr.appendChild(tdData);
+    tr.appendChild(tdLock);
+    tr.appendChild(tdOff);
 
-        dayTableBody.appendChild(tr);
-      });
+    dayTableBody.appendChild(tr);
+  });
 
-      const last = data[data.length - 1];
-      setLockdownBadge(!!last.lockdown);
-      setOnlineBadge(!!last.offline);
+  const last = data[data.length - 1];
+  setLockdownBadge(!!last.lockdown);
 
-      daySummary.textContent = `Įrašų: ${data.length}, bendrai ~${totalMb.toFixed(3)} MB`;
-    }
+  daySummary.textContent = `Įrašų: ${data.length}, bendrai ~${totalMb.toFixed(3)} MB`;
+}
 
-    async function sendCommand(patch) {
-      const { error } = await db
-        .from("commands")
-        .update(patch)
-        .eq("id", ESP_ID);
+async function sendCommand(patch) {
+  const { error } = await db
+    .from("commands")
+    .update(patch)
+    .eq("id", ESP_ID);
 
-      if (error) {
-        console.error(error);
-        alert("Klaida siunčiant komandą");
-      } else {
-        alert("Komanda išsaugota. ESP ją pasiims per artimiausią valandinį ciklą.");
-      }
-    }
+  if (error) alert("Klaida siunčiant komandą");
+  else alert("Komanda išsaugota.");
+}
 
-    function initAppOnce() {
+function initAppOnce() {
   if (appInitialized) return;
   appInitialized = true;
 
@@ -560,85 +540,51 @@ const end = new Date(dateStr + "T23:59:59Z");
   loadDayData(todayStr);
 
   datePicker.addEventListener("change", (e) => {
-    if (e.target.value) {
-      loadDayData(e.target.value);
-    }
+    if (e.target.value) loadDayData(e.target.value);
   });
 
-  btnUnblock.addEventListener("click", () => {
-    sendCommand({ unblock: true });
-  });
+  btnUnblock.onclick = () => sendCommand({ unblock: true });
+  btnRelayToggle.onclick = () => sendCommand({ relay_manual: "toggle" });
+  btnResetData.onclick = () => sendCommand({ reset_data_usage: true });
 
-  btnRelayToggle.addEventListener("click", () => {
-    sendCommand({ relay_manual: "toggle" });
-  });
-
-  btnResetData.addEventListener("click", () => {
-    sendCommand({ reset_data_usage: true });
-  });
-
-  // ✅ TEISINGA VIETA — paleidžiam tik vieną kartą
   setInterval(checkRealtimeStatus, 5000);
   checkRealtimeStatus();
 }
 
-      btnUnblock.addEventListener("click", () => {
-        sendCommand({ unblock: true });
-      });
+async function checkSession() {
+  const { data } = await db.auth.getUser();
+  if (data && data.user) {
+    authDiv.style.display = "none";
+    appDiv.style.display = "block";
+    initAppOnce();
+  } else {
+    authDiv.style.display = "block";
+    appDiv.style.display = "none";
+  }
+}
 
-      btnRelayToggle.addEventListener("click", () => {
-        sendCommand({ relay_manual: "toggle" });
-      });
+btnLogin.onclick = async () => {
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
 
-      btnResetData.addEventListener("click", () => {
-        sendCommand({ reset_data_usage: true });
-      });
-    }
+  if (!email || !password) return alert("Įvesk el. paštą ir slaptažodį");
 
-    async function checkSession() {
-      const { data, error } = await db.auth.getUser();
-      if (data && data.user) {
-        authDiv.style.display = "none";
-        appDiv.style.display = "block";
-        initAppOnce();
-      } else {
-        authDiv.style.display = "block";
-        appDiv.style.display = "none";
-      }
-    }
+  const { error } = await db.auth.signInWithPassword({ email, password });
+  if (error) return alert("Prisijungimo klaida");
 
-    btnLogin.addEventListener("click", async () => {
-      const email = authEmail.value.trim();
-      const password = authPassword.value;
+  checkSession();
+};
 
-      if (!email || !password) {
-        alert("Įvesk el. paštą ir slaptažodį");
-        return;
-      }
+btnLogout.onclick = async () => {
+  await db.auth.signOut();
+  appInitialized = false;
+  checkSession();
+};
 
-      const { data, error } = await db.auth.signInWithPassword({
-        email,
-        password,
-      });
+(async function init() {
+  await checkSession();
+})();
+</script>
 
-      if (error) {
-        console.error(error);
-        alert("Prisijungimo klaida");
-        return;
-      }
-
-      await checkSession();
-    });
-
-    btnLogout.addEventListener("click", async () => {
-      await db.auth.signOut();
-      appInitialized = false;
-      await checkSession();
-    });
-
-    (async function init() {
-      await checkSession();
-    })();
-  </script>
 </body>
 </html>
