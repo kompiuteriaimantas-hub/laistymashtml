@@ -416,6 +416,42 @@
       }
     }
 
+    // --- REALTIME OFFLINE DETEKTAVIMAS ---
+// ESP laikomas OFFLINE, jei paskutinis status įrašas senesnis nei 15 sekundžių
+async function checkRealtimeStatus() {
+  try {
+    const { data, error } = await db
+      .from("status")
+      .select("*")
+      .eq("id", ESP_ID)
+      .single();
+
+    if (error || !data) {
+      console.warn("Nepavyko gauti status:", error);
+      setOnlineBadge(true); // OFFLINE
+      return;
+    }
+
+    const lastSeen = new Date(data.updated_at);
+    const now = new Date();
+    const diffSec = (now - lastSeen) / 1000;
+
+    // Jei seniau nei 15 sek → OFFLINE
+    if (diffSec > 15) {
+      setOnlineBadge(true);
+    } else {
+      setOnlineBadge(false);
+    }
+
+    // Lockdown badge
+    setLockdownBadge(!!data.lockdown);
+
+  } catch (e) {
+    console.error("Klaida tikrinant status:", e);
+    setOnlineBadge(true); // OFFLINE
+  }
+}
+
     async function loadDayData(dateStr) {
       dayTableBody.innerHTML = `<tr><td colspan="7">Kraunama...</td></tr>`;
       daySummary.textContent = "Kraunama...";
@@ -515,19 +551,36 @@ const end = new Date(dateStr + "T23:59:59Z");
     }
 
     function initAppOnce() {
-      if (appInitialized) return;
-      appInitialized = true;
+  if (appInitialized) return;
+  appInitialized = true;
 
-      const today = new Date();
-      const todayStr = formatDateInput(today);
-      datePicker.value = todayStr;
-      loadDayData(todayStr);
+  const today = new Date();
+  const todayStr = formatDateInput(today);
+  datePicker.value = todayStr;
+  loadDayData(todayStr);
 
-      datePicker.addEventListener("change", (e) => {
-        if (e.target.value) {
-          loadDayData(e.target.value);
-        }
-      });
+  datePicker.addEventListener("change", (e) => {
+    if (e.target.value) {
+      loadDayData(e.target.value);
+    }
+  });
+
+  btnUnblock.addEventListener("click", () => {
+    sendCommand({ unblock: true });
+  });
+
+  btnRelayToggle.addEventListener("click", () => {
+    sendCommand({ relay_manual: "toggle" });
+  });
+
+  btnResetData.addEventListener("click", () => {
+    sendCommand({ reset_data_usage: true });
+  });
+
+  // ✅ TEISINGA VIETA — paleidžiam tik vieną kartą
+  setInterval(checkRealtimeStatus, 5000);
+  checkRealtimeStatus();
+}
 
       btnUnblock.addEventListener("click", () => {
         sendCommand({ unblock: true });
