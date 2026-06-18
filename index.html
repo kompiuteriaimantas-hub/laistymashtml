@@ -422,6 +422,19 @@ async function checkRealtimeStatus() {
     const now = new Date();
     const diffSec = (now - lastSeen) / 1000;
 
+    setOnlineBadge(diffSec > 15);
+    setLockdownBadge(!!data.lockdown);
+
+  } catch (e) {
+    setOnlineBadge(true);
+  }
+}
+
+
+    const lastSeen = new Date(data.timestamp);
+    const now = new Date();
+    const diffSec = (now - lastSeen) / 1000;
+
     // Jei seniau nei 15 sek → OFFLINE
     setOnlineBadge(diffSec > 15);
 
