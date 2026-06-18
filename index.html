@@ -347,7 +347,7 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
@@ -414,41 +414,11 @@ async function checkRealtimeStatus() {
       .single();
 
     if (error || !data) {
-      setOnlineBadge(true); // OFFLINE
+      setOnlineBadge(true);
       return;
     }
 
     const lastSeen = new Date(data.timestamp);
-    const now = new Date();
-    const diffSec = (now - lastSeen) / 1000;
-
-    setOnlineBadge(diffSec > 15);
-    setLockdownBadge(!!data.lockdown);
-
-  } catch (e) {
-    setOnlineBadge(true);
-  }
-}
-
-
-
-
-    const lastSeen = new Date(data.timestamp);
-    const now = new Date();
-    const diffSec = (now - lastSeen) / 1000;
-
-    // Jei seniau nei 15 sek → OFFLINE
-    setOnlineBadge(diffSec > 15);
-
-    // Lockdown badge
-    setLockdownBadge(!!data.lockdown);
-
-  } catch (e) {
-    setOnlineBadge(true);
-  }
-}
-
-    const lastSeen = new Date(data.updated_at);
     const now = new Date();
     const diffSec = (now - lastSeen) / 1000;
 
@@ -575,6 +545,7 @@ btnLogout.onclick = async () => {
   await checkSession();
 })();
 </script>
+
 
 
 
