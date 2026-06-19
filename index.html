@@ -446,7 +446,7 @@ async function loadDayData(dateStr) {
   const end = new Date(dateStr);
   end.setHours(23, 59, 59, 999);
 
-  console.log("QUERY RANGE:", start.toISOString(), end.toISOString());
+ 
 
   const { data, error } = await db
     .from("status_log") // ✅ TEISINGA: čia turi būti log, ne status
