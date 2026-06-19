@@ -406,17 +406,35 @@ function setOnlineBadge(isOffline) {
 async function checkRealtimeStatus() {
   try {
     const { data, error } = await db
-      .from("status_log")
+      .from("status")
       .select("*")
       .eq("id", ESP_ID)
-      .order("timestamp", { ascending: false })
-      .limit(1)
       .maybeSingle();
 
-    if (error || !data) {
+    if (!data) {
       setOnlineBadge(true);
       return;
     }
+
+    console.log("FULL DATA:", data);
+
+    const lastSeen = new Date(
+      data.updated_at || data.timestamp || data.created_at
+    ).getTime();
+
+    const diffSec = (Date.now() - lastSeen) / 1000;
+
+    console.log("DIFF SEC:", diffSec);
+
+    setOnlineBadge(diffSec > 60);
+    setLockdownBadge(!!data.lockdown);
+
+  } catch (e) {
+    console.log("Realtime error:", e);
+    setOnlineBadge(true);
+  }
+}
+
 
    
 const now = new Date(); // OK
