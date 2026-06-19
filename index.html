@@ -435,16 +435,21 @@ async function checkRealtimeStatus() {
   }
 }
 
-
 async function loadDayData(dateStr) {
   dayTableBody.innerHTML = `<tr><td colspan="7">Kraunama...</td></tr>`;
   daySummary.textContent = "Kraunama...";
 
-  const start = new Date(dateStr + "T00:00:00Z");
-  const end = new Date(dateStr + "T23:59:59Z");
+  // ✅ Teisingas LT → UTC konvertavimas
+  const start = new Date(dateStr);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(dateStr);
+  end.setHours(23, 59, 59, 999);
+
+  console.log("QUERY RANGE:", start.toISOString(), end.toISOString());
 
   const { data, error } = await db
-    .from("status")
+    .from("status_log") // ✅ TEISINGA: čia turi būti log, ne status
     .select("*")
     .eq("id", ESP_ID)
     .gte("timestamp", start.toISOString())
@@ -452,6 +457,7 @@ async function loadDayData(dateStr) {
     .order("timestamp", { ascending: true });
 
   if (error) {
+    console.log("LOAD ERROR:", error);
     dayTableBody.innerHTML = `<tr><td colspan="7">Klaida kraunant duomenis</td></tr>`;
     daySummary.textContent = "Klaida";
     return;
@@ -470,7 +476,7 @@ async function loadDayData(dateStr) {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td>${new Date(row.timestamp).toTimeString().slice(0,5)}</td>
+      <td>${new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
       <td>${row.temp?.toFixed(1) ?? "–"}</td>
       <td>${row.moisture?.toFixed(1) ?? "–"}</td>
       <td>${row.pressure?.toFixed(0) ?? "–"}</td>
@@ -483,11 +489,13 @@ async function loadDayData(dateStr) {
     dayTableBody.appendChild(tr);
   });
 
-  const last = data[data.length - 1];
-  setLockdownBadge(!!last.lockdown);
+  // ❌ SVARBU: NEBEKEISK BADGE ČIA
+  // setLockdownBadge(!!last.lockdown);  ← PALIK IŠTRINTĄ
 
   daySummary.textContent = `Įrašų: ${data.length}, bendrai ~${totalMb.toFixed(3)} MB`;
 }
+``
+
 
 async function sendCommand(patch) {
   const { error } = await db
