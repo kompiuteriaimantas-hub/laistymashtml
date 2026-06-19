@@ -263,6 +263,7 @@
             <span class="badge-dot"></span>
             <span id="online-text">Online</span>
           </div>
+          <div id="lastSeenText">📡 Paskutinis signalas: –</div>
           <div id="badge-lockdown" class="badge badge-lockdown-no">
             <span>LOCKDOWN:</span>
             <strong id="lockdown-text">Ne</strong>
@@ -378,6 +379,34 @@ const btnResetData = document.getElementById("btnResetData");
 
 let appInitialized = false;
 
+  let lastSeenGlobal = null;
+
+function updateLastSeenTimer() {
+  if (!lastSeenGlobal) return;
+
+  const text = formatLastSeen(lastSeenGlobal);
+  document.getElementById("lastSeenText").textContent =
+    "📡 Paskutinis signalas: " + text;
+}
+
+setInterval(updateLastSeenTimer, 1000);
+
+  function formatLastSeen(timestamp) {
+  const diffSec = Math.floor((Date.now() - timestamp) / 1000);
+
+  if (diffSec < 60) {
+    return `prieš ${diffSec}s`;
+  }
+
+  const min = Math.floor(diffSec / 60);
+  if (min < 60) {
+    return `prieš ${min} min`;
+  }
+
+  const hours = Math.floor(min / 60);
+  return `prieš ${hours} val`;
+}
+
 function setLockdownBadge(isLockdown) {
   if (isLockdown) {
     badgeLockdown.classList.remove("badge-lockdown-no");
@@ -410,7 +439,7 @@ async function checkRealtimeStatus() {
       .select("*")
       .eq("id", ESP_ID)
       .maybeSingle();
-
+       lastSeenGlobal = lastSeen;
  
 
     
@@ -424,6 +453,12 @@ if (!data) {
     const lastSeen = new Date(
       data.updated_at || data.timestamp || data.created_at
     ).getTime();
+    
+const text = formatLastSeen(lastSeen);
+
+document.getElementById("lastSeenText").textContent =
+  "📡 Paskutinis signalas: " + text;
+
 
     const diffSec = (Date.now() - lastSeen) / 1000;
 
