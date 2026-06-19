@@ -414,10 +414,13 @@ async function checkRealtimeStatus() {
   console.log("DATA:", data);
 console.log("LOCKDOWN RAW:", data && data.lockdown);
 
-    if (!data) {
-      setOnlineBadge(true);
-      return;
-    }
+    
+if (!data) {
+  // ✅ NIEKO NEDARYK SU LOCKDOWN
+  setOnlineBadge(true);
+  return;
+}
+
 
     const lastSeen = new Date(
       data.updated_at || data.timestamp || data.created_at
