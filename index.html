@@ -412,10 +412,6 @@ async function checkRealtimeStatus() {
       .order("timestamp", { ascending: false })
       .limit(1)
       .maybeSingle();
-    
-console.log("UPDATED_AT:", data.updated_at);
-console.log("NOW:", new Date().toISOString());
-
 
     if (error || !data) {
       setOnlineBadge(true);
