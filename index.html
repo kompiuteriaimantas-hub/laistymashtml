@@ -495,7 +495,7 @@ async function loadDayData(dateStr) {
   daySummary.textContent = `Įrašų: ${data.length}, bendrai ~${totalMb.toFixed(3)} MB`;
 }
 ``
-
+console.log("LOCKDOWN RAW:", data.lockdown);
 
 async function sendCommand(patch) {
   const { error } = await db
