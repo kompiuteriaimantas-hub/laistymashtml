@@ -480,6 +480,35 @@ const lastSeen = new Date(
 // ✅ ČIA PRIVALO BŪTI
 lastSeenGlobal = lastSeen;
 
+    
+const diffSec = (Date.now() - lastSeen) / 1000;
+const isOffline = diffSec > 60;
+
+// 🔒 LOCKDOWN toast
+if (data.lockdown === true && lastLockdownState === false) {
+  showToast("🔒 LOCKDOWN – patikrink sistemą!", "red");
+}
+
+// ✅ atsistatė
+if (data.lockdown === false && lastLockdownState === true) {
+  showToast("✅ LOCKDOWN išjungtas", "green");
+}
+
+// 📡 OFFLINE toast
+if (isOffline && !lastOfflineState) {
+  showToast("⚠️ ESP OFFLINE!", "orange");
+}
+
+// 📡 ONLINE grįžo
+if (!isOffline && lastOfflineState) {
+  showToast("✅ ESP ONLINE", "green");
+}
+
+// update states
+lastLockdownState = data.lockdown === true;
+lastOfflineState = isOffline;
+
+
 const text = formatLastSeen(lastSeen);
 
 document.getElementById("lastSeenText").textContent =
