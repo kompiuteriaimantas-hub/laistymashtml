@@ -443,31 +443,32 @@ async function checkRealtimeStatus() {
  
 
     
+
 if (!data) {
-  // ✅ NIEKO NEDARYK SU LOCKDOWN
   setOnlineBadge(true);
   return;
 }
 
+const lastSeen = new Date(
+  data.updated_at || data.timestamp || data.created_at
+).getTime();
 
-    const lastSeen = new Date(
-      data.updated_at || data.timestamp || data.created_at
-    ).getTime();
-     lastSeenGlobal = lastSeen;
-    
+// ✅ ČIA PRIVALO BŪTI
+lastSeenGlobal = lastSeen;
+
 const text = formatLastSeen(lastSeen);
 
 document.getElementById("lastSeenText").textContent =
   "📡 Paskutinis signalas: " + text;
 
+const diffSec = (Date.now() - lastSeen) / 1000;
 
-    const diffSec = (Date.now() - lastSeen) / 1000;
+setOnlineBadge(diffSec > 60);
 
-    setOnlineBadge(diffSec > 60);
-    
 if (data.lockdown !== undefined) {
   setLockdownBadge(data.lockdown === true);
 }
+
 
 
   } catch (e) {
