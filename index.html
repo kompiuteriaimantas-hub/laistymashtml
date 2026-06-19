@@ -391,6 +391,11 @@ const btnRelayToggle = document.getElementById("btnRelayToggle");
 const btnResetData = document.getElementById("btnResetData");
 
   
+let wateringActive = false;
+let wateringStart = 0;
+const WATER_DURATION = 10000; // 10s
+
+  
 function showToast(msg, color = "red") {
   const el = document.createElement("div");
 
@@ -421,6 +426,29 @@ let appInitialized = false;
   
 let lastLockdownState = false;
 let lastOfflineState = false;
+
+  
+function updateWateringBar() {
+  if (!wateringActive) return;
+
+  const now = Date.now();
+  const diff = now - wateringStart;
+
+  const percent = Math.min((diff / WATER_DURATION) * 100, 100);
+  const remaining = Math.max(0, Math.ceil((WATER_DURATION - diff) / 1000));
+
+  document.getElementById("wateringBar").style.width = percent + "%";
+  document.getElementById("wateringText").textContent =
+    remaining > 0 ? `Liko ${remaining}s` : "Baigta";
+
+  if (diff >= WATER_DURATION) {
+    wateringActive = false;
+    setTimeout(() => {
+      document.getElementById("wateringBox").style.display = "none";
+    }, 1500);
+  }
+}
+
 
 
 function updateLastSeenTimer() {
@@ -597,7 +625,17 @@ function initAppOnce() {
   datePicker.onchange = () => loadDayData(datePicker.value);
 
   btnUnblock.onclick = () => sendCommand({ unblock: true });
-  btnRelayToggle.onclick = () => sendCommand({ relay_manual: "toggle" });
+  
+btnRelayToggle.onclick = () => {
+  sendCommand({ relay_manual: "WATER_10S" });
+
+  // start UI progress
+  wateringActive = true;
+  wateringStart = Date.now();
+
+  document.getElementById("wateringBox").style.display = "block";
+};
+
   btnResetData.onclick = () => sendCommand({ reset_data_usage: true });
 
   // ✅ pirmas status užkrovimas
