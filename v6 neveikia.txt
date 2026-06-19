@@ -23,10 +23,11 @@ const char* ssid     = "DungeonKeeper";
 const char* password = "95-BpSg:asilas695";
 
 // ---- Supabase ----
-const char* SUPABASE_STATUS_URL    = "https://wbueugwhngtgtifuasvm.supabase.co/functions/v1/status";
-const char* SUPABASE_ERROR_URL     = "https://wbueugwhngtgtifuasvm.supabase.co/functions/v1/error";
-const char* SUPABASE_DATA_URL      = "https://wbueugwhngtgtifuasvm.supabase.co/rest/v1/data_usage";
-const char* SUPABASE_COMMANDS_URL  = "https://wbueugwhngtgtifuasvm.supabase.co/rest/v1/commands";
+const char* SUPABASE_STATUS_URL    = "https://wbueugwhngtgtiufasvm.supabase.co/functions/v1/status";
+const char* SUPABASE_ERROR_URL     = "https://wbueugwhngtgtiufasvm.supabase.co/functions/v1/error";
+const char* SUPABASE_DATA_URL      = "https://wbueugwhngtgtiufasvm.supabase.co/rest/v1/data_usage";
+const char* SUPABASE_COMMANDS_URL  = "https://wbueugwhngtgtiufasvm.supabase.co/rest/v1/commands";
+
 
 const char* ESP_ID = "esp1";
 
@@ -144,6 +145,7 @@ void sendError(const char* msg) {
   HTTPClient http;
   WiFiClientSecure client;
   client.setInsecure();
+client.setBufferSizes(4096, 4096);
 
   if (http.begin(client, SUPABASE_ERROR_URL)) {
     http.addHeader("Content-Type", "application/json");
@@ -195,6 +197,7 @@ void sendStatus() {
   HTTPClient http;
   WiFiClientSecure client;
   client.setInsecure();
+client.setBufferSizes(4096, 4096);
 
   if (!wifiOk) return;
 
@@ -229,6 +232,7 @@ void sendDataUsage() {
   HTTPClient http;
   WiFiClientSecure client;
   client.setInsecure();
+client.setBufferSizes(4096, 4096);
 
   float mb = dataUsedBytes / 1024.0 / 1024.0;
 
@@ -262,6 +266,7 @@ void clearCommandsOnServer() {
   HTTPClient http;
   WiFiClientSecure client;
   client.setInsecure();
+client.setBufferSizes(4096, 4096);
 
   String url = String(SUPABASE_COMMANDS_URL) + "?id=eq." + ESP_ID;
 
@@ -293,6 +298,7 @@ void checkCommands() {
   HTTPClient http;
   WiFiClientSecure client;
   client.setInsecure();
+client.setBufferSizes(4096, 4096);
 
   String url = String(SUPABASE_COMMANDS_URL) + "?id=eq." + ESP_ID + "&select=reset_data_usage,unblock,relay_manual";
 
@@ -447,6 +453,19 @@ void setup() {
 sendDataUsage();
 checkCommands();
 lastStatusSend = millis();
+
+Serial.println("TESTING TLS...");
+WiFiClientSecure test;
+test.setInsecure();
+test.setBufferSizes(4096, 4096);
+
+if (!test.connect("wbueugwhngtgtiufasvm.supabase.co", 443)) {
+  Serial.println("TLS FAIL");
+} else {
+  Serial.println("TLS OK");
+}
+
+
 }
 
 
