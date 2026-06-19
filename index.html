@@ -564,16 +564,59 @@ function initAppOnce() {
   btnRelayToggle.onclick = () => sendCommand({ relay_manual: "toggle" });
   btnResetData.onclick = () => sendCommand({ reset_data_usage: true });
 
-  setInterval(checkRealtimeStatus, 5000);
+  // ✅ pirmas status užkrovimas
   checkRealtimeStatus();
-}
 
+  // ✅ REALTIME (instant update 🔥)
+  db.channel('status-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'status',
+        filter: `id=eq.${ESP_ID}`
+      },
+      (payload) => {
+
+        const data = payload.new;
+
+        console.log("REALTIME:", data);
+
+        if (!data) return;
+
+        const lastSeen = new Date(
+          data.updated_at || data.timestamp || data.created_at
+        ).getTime();
+
+        lastSeenGlobal = lastSeen;
+
+        document.getElementById("lastSeenText").textContent =
+          "📡 Paskutinis signalas: " + formatLastSeen(lastSeen);
+
+        const diffSec = (Date.now() - lastSeen) / 1000;
+
+        setOnlineBadge(diffSec > 60);
+
+        if (data.lockdown !== undefined) {
+          setLockdownBadge(data.lockdown === true);
+        }
+      }
+    )
+    .subscribe();
+
+  // ✅ backup polling (kas 60s – saugumas)
+  //setInterval(checkRealtimeStatus, 60000);
+}
+``
 async function checkSession() {
   const { data } = await db.auth.getUser();
   if (data && data.user) {
     authDiv.style.display = "none";
     appDiv.style.display = "block";
     initAppOnce();
+
+    
   } else {
     authDiv.style.display = "block";
     appDiv.style.display = "none";
