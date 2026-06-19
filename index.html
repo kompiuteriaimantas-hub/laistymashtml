@@ -426,7 +426,7 @@ const lastSeen = new Date(data.created_at);
 const diffSec = (Date.now() - lastSeen.getTime()) / 1000;
 
     setOnlineBadge(diffSec > 60);
-    setLockdownBadge(!!data.lockdown);
+    //setLockdownBadge(!!data.lockdown);
 
   } catch (e) {
     setOnlineBadge(true);
