@@ -1,6 +1,3 @@
-// --- BEVEIK VISAS KODAS TAS PATS ---
-// ✅ PAKEITIMAI PAŽYMĖTI: // ✅ FIX
-
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClientSecure.h>
@@ -12,47 +9,57 @@
 // ---- PINAI ----
 #define MOISTURE_PIN A0
 #define RELAY_PIN    D5
+
+// ---- OLED ----
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// ---- BMP280 ----
 Adafruit_BMP280 bmp;
 
-// WiFi
-const char* ssid = "";
+// ---- WiFi ----
+const char* ssid     = "";
 const char* password = "";
 
-// Supabase
-const char* SUPABASE_STATUS_URL = "https://wbueugwhngtgtiufasvm.supabase.co/functions/v1/status";
-const char* SUPABASE_ERROR_URL  = "https://wbueugwhngtgtiufasvm.supabase.co/functions/v1/error";
-const char* SUPABASE_DATA_URL   = "https://wbueugwhngtgtiufasvm.supabase.co/rest/v1/data_usage";
-const char* SUPABASE_COMMANDS_URL = "https://wbueugwhngtgtiufasvm.supabase.co/rest/v1/commands";
+// ---- Supabase ----
+const char* SUPABASE_STATUS_URL    = "https://wbueugwhngtgtiufasvm.supabase.co/functions/v1/status";
+const char* SUPABASE_ERROR_URL     = "https://wbueugwhngtgtiufasvm.supabase.co/functions/v1/error";
+const char* SUPABASE_DATA_URL      = "https://wbueugwhngtgtiufasvm.supabase.co/rest/v1/data_usage";
+const char* SUPABASE_COMMANDS_URL  = "https://wbueugwhngtgtiufasvm.supabase.co/rest/v1/commands";
 
 const char* ESP_ID = "esp1";
+
 const char* API_KEY = "TAVO_KEY";
 
-// Moisture
+// ---- Moisture ----
 const int dry = 650;
 const int wet = 336;
 
-// Time
+// ---- Time ----
 unsigned long lastStatusSend = 0;
-unsigned long lastDataSend = 0;   // ✅ FIX
+unsigned long lastDataSend = 0;       // ✅ FIX
+unsigned long lastCmdCheck = 0;       // ✅ FIX
 const unsigned long STATUS_INTERVAL = 15000UL;  // ✅ FIX (buvo 5000)
 
-// Flags
 bool lockdown = false;
 bool lockdownReported = false;
 bool wifiOnline = false;
 
+// ---- Sensors ----
 float lastMoisture = NAN;
 float lastTemp = NAN;
 float lastPressure = NAN;
 
+// ---- Flags ----
 bool isWatering = false;
 unsigned long dataUsedBytes = 0;
 
-// -----------------
+void addDataUsage(size_t payloadLen) {
+  dataUsedBytes += payloadLen + 300;
+}
 
+// ---- SENSOR ----
 float readMoisturePercent() {
   int raw = analogRead(MOISTURE_PIN);
   float percent = 100.0 * (dry - raw) / (float)(dry - wet);
@@ -61,7 +68,7 @@ float readMoisturePercent() {
   return percent;
 }
 
-// WiFi
+// ---- WIFI ----
 bool ensureWiFi() {
   if (WiFi.status() == WL_CONNECTED) return true;
 
@@ -75,28 +82,55 @@ bool ensureWiFi() {
   return WiFi.status() == WL_CONNECTED;
 }
 
-// Sensors
+// ---- DISPLAY ----
+void updateDisplay(const char* statusText, float moisture, float temp, float pressure) {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  display.setTextSize(2);
+  display.setCursor(0, 0);
+  display.println(statusText);
+
+  display.setTextSize(1);
+  display.setCursor(0, 28);
+  display.print("Dregme: ");
+  display.println(moisture, 1);
+
+  display.setCursor(0, 45);
+  display.print(temp, 1);
+  display.print("C ");
+  display.print((int)pressure);
+  display.println("hPa");
+
+  display.display();
+}
+
+// ---- SENSOR REFRESH ----
 void refreshSensors() {
   lastMoisture = readMoisturePercent();
   lastTemp = bmp.readTemperature();
   lastPressure = bmp.readPressure() / 100.0F;
 }
 
-// Display
-void updateDisplay(const char* txt) {
-  display.clearDisplay();
-  display.setCursor(0,0);
-  display.setTextSize(2);
-  display.println(txt);
-  display.display();
+// ---- RELAY ----
+void relayOn() {
+  digitalWrite(RELAY_PIN, HIGH);
+  isWatering = true;
+}
+
+void relayOff() {
+  digitalWrite(RELAY_PIN, LOW);
+  isWatering = false;
 }
 
 // =======================
-// ✅ HTTP FIXAI VIDUJE
+// ✅ HTTP FIX
 // =======================
 
 void sendStatus() {
   if (!ensureWiFi()) return;
+
+  refreshSensors();
 
   HTTPClient http;
   WiFiClientSecure client;
@@ -111,7 +145,11 @@ void sendStatus() {
     http.addHeader("Authorization", String("Bearer ") + API_KEY);
 
     String payload = "{";
-    payload += "\"id\":\"esp1\"";
+    payload += "\"id\":\"" + String(ESP_ID) + "\",";
+    payload += "\"moisture\":" + String(lastMoisture, 1) + ",";
+    payload += "\"temp\":" + String(lastTemp, 2) + ",";
+    payload += "\"pressure\":" + String(lastPressure, 2) + ",";
+    payload += "\"lockdown\":" + String(lockdown ? "true" : "false");
     payload += "}";
 
     http.POST(payload);
@@ -132,36 +170,51 @@ void sendDataUsage() {
   String url = String(SUPABASE_DATA_URL) + "?id=eq." + ESP_ID;
 
   if (http.begin(client, url)) {
+
     http.addHeader("Content-Type", "application/json");
     http.addHeader("apikey", API_KEY);
     http.addHeader("Authorization", String("Bearer ") + API_KEY);
 
-    http.POST("{}");
+    float mb = dataUsedBytes / 1024.0 / 1024.0;
 
+    String payload = "{";
+    payload += "\"id\":\"" + String(ESP_ID) + "\",";
+    payload += "\"data_used_mb\":" + String(mb, 3);
+    payload += "}";
+
+    http.POST(payload);
     http.end();
     delay(50); // ✅ FIX
   }
 }
 
-void checkCommands() {
-  if (!ensureWiFi()) return;
+// =======================
+// AUTO WATER – PALIKTA ✅
+// =======================
 
-  HTTPClient http;
-  WiFiClientSecure client;
-  client.setInsecure();
+void autoWaterCycle() {
+  if (lockdown || isWatering) return;
 
-  delay(50); // ✅ FIX
+  float before = readMoisturePercent();
 
-  if (http.begin(client, SUPABASE_COMMANDS_URL)) {
-    http.addHeader("apikey", API_KEY);
+  for (int i = 0; i < 3; i++) {
 
-    http.GET();
+    relayOn();
+    delay(10000);
+    relayOff();
 
-    http.end();
-    delay(50); // ✅ FIX
+    delay(10000);
+
+    float after = readMoisturePercent();
+
+    if (after > before) return;
   }
+
+  lockdown = true;
 }
 
+// =======================
+// SETUP
 // =======================
 
 void setup() {
@@ -173,18 +226,11 @@ void setup() {
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   bmp.begin(0x77);
 
-  Serial.println("TLS TEST");
-
-  WiFiClientSecure test;
-  test.setInsecure();
-
-  if (!test.connect("wbueugwhngtgtiufasvm.supabase.co", 443)) {
-    Serial.println("TLS FAIL");
-  } else {
-    Serial.println("TLS OK");
-  }
+  pinMode(RELAY_PIN, OUTPUT);
 }
 
+// =======================
+// LOOP (FIX)
 // =======================
 
 void loop() {
@@ -194,17 +240,34 @@ void loop() {
 
   if (now - lastCheck > 5000) {
     lastCheck = now;
+
     refreshSensors();
+
+    if (isWatering) {
+      updateDisplay("LAISTYMAS", lastMoisture, lastTemp, lastPressure);
+    }
+    else if (lockdown) {
+      updateDisplay("LOCK", lastMoisture, lastTemp, lastPressure);
+    }
+    else if (lastMoisture < 30.0) {
+      autoWaterCycle();
+    }
+    else {
+      updateDisplay("OK", lastMoisture, lastTemp, lastPressure);
+    }
   }
 
-  // ✅ FIX: mažiau TLS load
   if (now - lastStatusSend > STATUS_INTERVAL) {
     sendStatus();
-    checkCommands();
     lastStatusSend = now;
   }
 
-  if (now - lastDataSend > 60000) { // ✅ kas 1 min
+  if (now - lastCmdCheck > 15000) {
+    checkCommands();
+    lastCmdCheck = now;
+  }
+
+  if (now - lastDataSend > 60000) {
     sendDataUsage();
     lastDataSend = now;
   }
