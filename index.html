@@ -411,16 +411,19 @@ async function checkRealtimeStatus() {
       .eq("id", ESP_ID)
       .order("timestamp", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       setOnlineBadge(true);
       return;
     }
 
-    const lastSeen = new Date(data.timestamp);
-    const now = new Date();
-    const diffSec = (now - lastSeen) / 1000;
+   
+const now = new Date(); // OK
+const lastSeen = new Date(data.created_at);
+
+// 🔥 svarbiausia:
+const diffSec = (Date.now() - lastSeen.getTime()) / 1000;
 
     setOnlineBadge(diffSec > 60);
     setLockdownBadge(!!data.lockdown);
@@ -438,7 +441,7 @@ async function loadDayData(dateStr) {
   const end = new Date(dateStr + "T23:59:59Z");
 
   const { data, error } = await db
-    .from("status_log")
+    .from("status")
     .select("*")
     .eq("id", ESP_ID)
     .gte("timestamp", start.toISOString())
