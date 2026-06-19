@@ -377,6 +377,30 @@ const btnUnblock = document.getElementById("btnUnblock");
 const btnRelayToggle = document.getElementById("btnRelayToggle");
 const btnResetData = document.getElementById("btnResetData");
 
+  
+function showToast(msg, color = "red") {
+  const el = document.createElement("div");
+
+  el.textContent = msg;
+  el.style.position = "fixed";
+  el.style.bottom = "20px";
+  el.style.right = "20px";
+  el.style.background = color;
+  el.style.color = "white";
+  el.style.padding = "10px 14px";
+  el.style.borderRadius = "10px";
+  el.style.boxShadow = "0 5px 15px rgba(0,0,0,0.2)";
+  el.style.zIndex = 9999;
+  el.style.fontSize = "14px";
+
+  document.body.appendChild(el);
+
+  setTimeout(() => {
+    el.remove();
+  }, 4000);
+}
+
+
 let appInitialized = false;
 
   let lastSeenGlobal = null;
@@ -464,6 +488,8 @@ document.getElementById("lastSeenText").textContent =
 const diffSec = (Date.now() - lastSeen) / 1000;
 
 setOnlineBadge(diffSec > 60);
+    (payload) => {
+  const data = payload.new;
 
 if (data.lockdown !== undefined) {
   setLockdownBadge(data.lockdown === true);
@@ -550,6 +576,9 @@ async function sendCommand(patch) {
   else alert("Komanda išsaugota.");
 }
 
+let lastLockdownState = false;
+let lastOfflineState = false;
+  
 function initAppOnce() {
   if (appInitialized) return;
   appInitialized = true;
