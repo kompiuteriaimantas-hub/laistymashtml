@@ -458,73 +458,34 @@ function setOnlineBadge(isOffline) {
 // --- REALTIME OFFLINE DETEKTAVIMAS ---
 async function checkRealtimeStatus() {
   try {
-    const { data, error } = await db
+    const { data } = await db
       .from("status")
       .select("*")
       .eq("id", ESP_ID)
       .maybeSingle();
-      
- 
 
-    
+    if (!data) {
+      setOnlineBadge(true);
+      return;
+    }
 
-if (!data) {
-  setOnlineBadge(true);
-  return;
-}
+    const lastSeen = new Date(
+      data.updated_at || data.timestamp || data.created_at
+    ).getTime();
 
-const lastSeen = new Date(
-  data.updated_at || data.timestamp || data.created_at
-).getTime();
+    lastSeenGlobal = lastSeen;
 
-// ✅ ČIA PRIVALO BŪTI
-lastSeenGlobal = lastSeen;
+    document.getElementById("lastSeenText").textContent =
+      "📡 Paskutinis signalas: " + formatLastSeen(lastSeen);
 
-    
-const diffSec = (Date.now() - lastSeen) / 1000;
-const isOffline = diffSec > 60;
+    const diffSec = (Date.now() - lastSeen) / 1000;
+    const isOffline = diffSec > 60;
 
-// 🔒 LOCKDOWN toast
-if (data.lockdown === true && lastLockdownState === false) {
-  showToast("🔒 LOCKDOWN – patikrink sistemą!", "red");
-}
+    setOnlineBadge(isOffline);
 
-// ✅ atsistatė
-if (data.lockdown === false && lastLockdownState === true) {
-  showToast("✅ LOCKDOWN išjungtas", "green");
-}
-
-// 📡 OFFLINE toast
-if (isOffline && !lastOfflineState) {
-  showToast("⚠️ ESP OFFLINE!", "orange");
-}
-
-// 📡 ONLINE grįžo
-if (!isOffline && lastOfflineState) {
-  showToast("✅ ESP ONLINE", "green");
-}
-
-// update states
-lastLockdownState = data.lockdown === true;
-lastOfflineState = isOffline;
-
-
-const text = formatLastSeen(lastSeen);
-
-document.getElementById("lastSeenText").textContent =
-  "📡 Paskutinis signalas: " + text;
-
-const diffSec = (Date.now() - lastSeen) / 1000;
-
-setOnlineBadge(diffSec > 60);
-    (payload) => {
-  const data = payload.new;
-
-if (data.lockdown !== undefined) {
-  setLockdownBadge(data.lockdown === true);
-}
-
-
+    if (data.lockdown !== undefined) {
+      setLockdownBadge(data.lockdown === true);
+    }
 
   } catch (e) {
     console.log("Realtime error:", e);
@@ -626,42 +587,64 @@ function initAppOnce() {
   checkRealtimeStatus();
 
   // ✅ REALTIME (instant update 🔥)
-  db.channel('status-changes')
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'status',
-        filter: `id=eq.${ESP_ID}`
-      },
-      (payload) => {
+ 
+db.channel('status-changes')
+  .on(
+    'postgres_changes',
+    {
+      event: '*',   // 🔥 svarbu
+      schema: 'public',
+      table: 'status',
+      filter: `id=eq.${ESP_ID}`
+    },
+    (payload) => {
 
-        const data = payload.new;
+      const data = payload.new;
+      if (!data) return;
 
-        console.log("REALTIME:", data);
+      console.log("REALTIME:", data);
 
-        if (!data) return;
+      const lastSeen = new Date(
+        data.updated_at || data.timestamp || data.created_at
+      ).getTime();
 
-        const lastSeen = new Date(
-          data.updated_at || data.timestamp || data.created_at
-        ).getTime();
+      lastSeenGlobal = lastSeen;
 
-        lastSeenGlobal = lastSeen;
+      const diffSec = (Date.now() - lastSeen) / 1000;
+      const isOffline = diffSec > 60;
 
-        document.getElementById("lastSeenText").textContent =
-          "📡 Paskutinis signalas: " + formatLastSeen(lastSeen);
-
-        const diffSec = (Date.now() - lastSeen) / 1000;
-
-        setOnlineBadge(diffSec > 60);
-
-        if (data.lockdown !== undefined) {
-          setLockdownBadge(data.lockdown === true);
-        }
+      // 🔒 LOCKDOWN toast
+      if (data.lockdown === true && lastLockdownState === false) {
+        showToast("🔒 LOCKDOWN – patikrink sistemą!", "red");
       }
-    )
-    .subscribe();
+
+      if (data.lockdown === false && lastLockdownState === true) {
+        showToast("✅ LOCKDOWN išjungtas", "green");
+      }
+
+      // 📡 OFFLINE toast
+      if (isOffline && !lastOfflineState) {
+        showToast("⚠️ ESP OFFLINE!", "orange");
+      }
+
+      if (!isOffline && lastOfflineState) {
+        showToast("✅ ESP ONLINE", "green");
+      }
+
+      // update states
+      lastLockdownState = data.lockdown === true;
+      lastOfflineState = isOffline;
+
+      // UI update
+      document.getElementById("lastSeenText").textContent =
+        "📡 Paskutinis signalas: " + formatLastSeen(lastSeen);
+
+      setOnlineBadge(isOffline);
+      setLockdownBadge(data.lockdown === true);
+    }
+  )
+  .subscribe();
+
 
   // ✅ backup polling (kas 60s – saugumas)
   //setInterval(checkRealtimeStatus, 60000);
