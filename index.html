@@ -405,7 +405,7 @@ function setOnlineBadge(isOffline) {
 // --- REALTIME OFFLINE DETEKTAVIMAS ---
 async function checkRealtimeStatus() {
   try {
-    const { data, error } = await db
+    const { data } = await db
       .from("status")
       .select("*")
       .eq("id", ESP_ID)
@@ -435,21 +435,6 @@ async function checkRealtimeStatus() {
   }
 }
 
-
-   
-const now = new Date(); // OK
-const lastSeen = new Date(data.created_at);
-
-// 🔥 svarbiausia:
-const diffSec = (Date.now() - lastSeen.getTime()) / 1000;
-
-    setOnlineBadge(diffSec > 60);
-    //setLockdownBadge(!!data.lockdown);
-
-  } catch (e) {
-    setOnlineBadge(true);
-  }
-}
 
 async function loadDayData(dateStr) {
   dayTableBody.innerHTML = `<tr><td colspan="7">Kraunama...</td></tr>`;
