@@ -405,30 +405,25 @@ function setOnlineBadge(isOffline) {
 // --- REALTIME OFFLINE DETEKTAVIMAS ---
 async function checkRealtimeStatus() {
   try {
-    const { data } = await db
-      
-console.log("DATA:", data);
-console.log("LOCKDOWN RAW:", data?.lockdown);
-
+    const { data, error } = await db
       .from("status")
       .select("*")
       .eq("id", ESP_ID)
       .maybeSingle();
+
+    console.log("DATA:", data);               // ✅ ČIA
+    console.log("LOCKDOWN RAW:", data?.lockdown); // ✅ ČIA
 
     if (!data) {
       setOnlineBadge(true);
       return;
     }
 
-    console.log("FULL DATA:", data);
-
     const lastSeen = new Date(
       data.updated_at || data.timestamp || data.created_at
     ).getTime();
 
     const diffSec = (Date.now() - lastSeen) / 1000;
-
-    console.log("DIFF SEC:", diffSec);
 
     setOnlineBadge(diffSec > 60);
     setLockdownBadge(!!data.lockdown);
@@ -438,6 +433,7 @@ console.log("LOCKDOWN RAW:", data?.lockdown);
     setOnlineBadge(true);
   }
 }
+``
 
 async function loadDayData(dateStr) {
   dayTableBody.innerHTML = `<tr><td colspan="7">Kraunama...</td></tr>`;
