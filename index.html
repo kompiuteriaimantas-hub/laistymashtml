@@ -406,6 +406,10 @@ function setOnlineBadge(isOffline) {
 async function checkRealtimeStatus() {
   try {
     const { data } = await db
+      
+console.log("DATA:", data);
+console.log("LOCKDOWN RAW:", data?.lockdown);
+
       .from("status")
       .select("*")
       .eq("id", ESP_ID)
@@ -495,7 +499,7 @@ async function loadDayData(dateStr) {
   daySummary.textContent = `Įrašų: ${data.length}, bendrai ~${totalMb.toFixed(3)} MB`;
 }
 ``
-console.log("LOCKDOWN RAW:", data.lockdown);
+
 
 async function sendCommand(patch) {
   const { error } = await db
