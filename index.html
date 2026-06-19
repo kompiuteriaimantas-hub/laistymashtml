@@ -405,6 +405,11 @@ let appInitialized = false;
 
   let lastSeenGlobal = null;
 
+  
+let lastLockdownState = false;
+let lastOfflineState = false;
+
+
 function updateLastSeenTimer() {
   if (!lastSeenGlobal) return;
 
@@ -566,9 +571,7 @@ async function sendCommand(patch) {
   else alert("Komanda išsaugota.");
 }
 
-let lastLockdownState = false;
-let lastOfflineState = false;
-  
+
 function initAppOnce() {
   if (appInitialized) return;
   appInitialized = true;
