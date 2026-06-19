@@ -411,8 +411,8 @@ async function checkRealtimeStatus() {
       .eq("id", ESP_ID)
       .maybeSingle();
 
-    console.log("DATA:", data);               // ✅ ČIA
-    console.log("LOCKDOWN RAW:", data?.lockdown); // ✅ ČIA
+  console.log("DATA:", data);
+console.log("LOCKDOWN RAW:", data && data.lockdown);
 
     if (!data) {
       setOnlineBadge(true);
