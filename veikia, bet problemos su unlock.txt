@@ -1,0 +1,555 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <Wire.h>
+#include <Adafruit_BMP280.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+// ---- PINAI ----
+#define MOISTURE_PIN A0
+#define RELAY_PIN    D5
+
+// ---- OLED ----
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// ---- BMP280 ----
+Adafruit_BMP280 bmp;
+
+// ---- WiFi ----
+const char* ssid     = "";
+const char* password = "";
+
+// ---- Supabase ----
+const char* SUPABASE_STATUS_URL    = "https://wbueugwhngtgtifuasvm.supabase.co/functions/v1/status";
+const char* SUPABASE_ERROR_URL     = "https://wbueugwhngtgtifuasvm.supabase.co/functions/v1/error";
+const char* SUPABASE_DATA_URL      = "https://wbueugwhngtgtifuasvm.supabase.co/rest/v1/data_usage";
+const char* SUPABASE_COMMANDS_URL  = "https://wbueugwhngtgtifuasvm.supabase.co/rest/v1/commands";
+
+const char* ESP_ID = "esp1";
+
+// SERVICE_ROLE_KEY
+const char* API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+
+// ---- Moisture kalibracija ----
+const int dry = 650;
+const int wet = 336;
+
+// ---- Laikas ----
+unsigned long lastStatusSend = 0;
+const unsigned long STATUS_INTERVAL = 10000UL; // 1min 1val bus 3600000UL; // 1h
+
+bool lockdown = false;
+bool lockdownReported = false;
+bool wifiOnline = false;
+int manualRelayRequest = 0;  
+// 0 = nieko
+// 1 = ON
+// 2 = OFF
+// 3 = TOGGLE
+bool needClearCommands = false;
+
+
+
+// ---- WiFi retry limit ----
+int wifiRetryCount = 0;
+unsigned long wifiRetryWindowStart = 0;
+const unsigned long WIFI_RETRY_WINDOW = 3600000UL; // 1h
+const int WIFI_RETRY_LIMIT = 3;
+
+// ---- Paskutiniai matavimai ----
+float lastMoisture = NAN;
+float lastTemp = NAN;
+float lastPressure = NAN;
+
+// ---- Watering flag ----
+bool isWatering = false;
+
+// ---- Duomenų skaitiklis ----
+unsigned long dataUsedBytes = 0;
+
+void syncTime() {
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+
+  time_t now = time(nullptr);
+  int retry = 0;
+
+  while (now < 1700000000 && retry < 20) {
+    delay(500);
+    now = time(nullptr);
+    retry++;
+    Serial.print(".");
+  }
+
+  Serial.println("\nTime OK");
+}
+
+void addDataUsage(size_t payloadLen) {
+  dataUsedBytes += payloadLen + 300; // +approx header/TLS
+}
+
+// ---- FUNKCIJOS ----
+
+float readMoisturePercent() {
+  int raw = analogRead(MOISTURE_PIN);
+  float percent = 100.0 * (float)(dry - raw) / (float)(dry - wet);
+  if (percent < 0) percent = 0;
+  if (percent > 100) percent = 100;
+  return percent;
+}
+
+bool ensureWiFi() {
+  if (WiFi.status() == WL_CONNECTED) {
+    wifiOnline = true;
+    return true;
+  }
+
+  WiFi.disconnect();
+  WiFi.begin(ssid, password);
+
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 8000) {
+    delay(200);
+  }
+
+  wifiOnline = (WiFi.status() == WL_CONNECTED);
+  return wifiOnline;
+}
+
+
+void updateDisplay(const char* statusText, float moisture, float temp, float pressure) {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  display.setTextSize(2);
+  display.setCursor(0, 0);
+  display.println(statusText);
+
+  display.setTextSize(1);
+  display.setCursor(0, 28);
+  display.print("Dregme: ");
+  display.print(moisture, 1);
+  display.println("%");
+
+  display.setCursor(0, 45);
+  display.print(temp, 1);
+  display.print("C  ");
+  display.print((int)pressure);
+  display.println("hPa");
+
+  display.display();
+}
+
+void refreshSensors() {
+  lastMoisture = readMoisturePercent();
+  lastTemp = bmp.readTemperature();
+  lastPressure = bmp.readPressure() / 100.0F;
+
+  Serial.printf("[SENSORS] Moisture: %.2f%%  Temp: %.2fC  Pressure: %.2fhPa\n",
+                lastMoisture, lastTemp, lastPressure);
+}
+
+void sendError(const char* msg) {
+  if (!ensureWiFi()) return;
+
+  HTTPClient http;
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  if (http.begin(client, SUPABASE_ERROR_URL)) {
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("apikey", API_KEY);
+    http.addHeader("Authorization", String("Bearer ") + API_KEY);
+
+    String payload = "{";
+payload += "\"id\":\"" + String(ESP_ID) + "\",";
+payload += "\"moisture\":" + String(lastMoisture, 1) + ",";
+payload += "\"temp\":" + String(lastTemp, 2) + ",";
+payload += "\"pressure\":" + String(lastPressure, 2) + ",";
+payload += "\"lockdown\":" + String(lockdown ? "true" : "false") + ",";
+payload += "\"offline\":false,";
+payload += "\"error\":\"" + String(msg) + "\"";
+payload += "}";
+
+
+    int code = http.POST(payload);
+    addDataUsage(payload.length());
+
+    Serial.print("[ERROR POST] code: ");
+    Serial.println(code);
+    Serial.println(http.getString());
+
+    http.end();
+  }
+}
+
+
+
+void relayOn() {
+  Serial.println("[RELAY] ON");
+  digitalWrite(RELAY_PIN, HIGH);
+  isWatering = true;
+}
+
+void relayOff() {
+  Serial.println("[RELAY] OFF");
+  digitalWrite(RELAY_PIN, LOW);
+  isWatering = false;
+}
+
+void sendStatus() {
+  bool wifiOk = ensureWiFi();
+  bool offline = !wifiOk;
+
+  
+
+  HTTPClient http;
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  if (!wifiOk) return;
+
+  if (http.begin(client, SUPABASE_STATUS_URL)) {
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("apikey", API_KEY);                         // ← PRIDĖTA
+    http.addHeader("Authorization", String("Bearer ") + API_KEY);
+
+    String payload = "{";
+    payload += "\"id\":\"" + String(ESP_ID) + "\",";
+    payload += "\"moisture\":" + String(lastMoisture, 1) + ",";
+    payload += "\"temp\":" + String(lastTemp, 2) + ",";
+    payload += "\"pressure\":" + String(lastPressure, 2) + ",";
+    payload += "\"lockdown\":" + String(lockdown ? "true" : "false") + ",";
+    payload += "\"offline\":" + String(offline ? "true" : "false");
+    payload += "}";
+  
+  Serial.println("=== STATUS PAYLOAD ===");
+    Serial.println(payload);
+
+
+    int code = http.POST(payload);
+    addDataUsage(payload.length());
+if (code <= 0) {
+  Serial.print("[STATUS ERROR] ");
+  Serial.println(http.errorToString(code));
+}
+
+
+   Serial.print("[STATUS POST] code: ");
+    Serial.println(code);
+
+    http.end();
+  }
+}
+
+void sendDataUsage() {
+  if (!ensureWiFi()) return;
+
+  HTTPClient http;
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  float mb = dataUsedBytes / 1024.0 / 1024.0;
+
+  String url = String(SUPABASE_DATA_URL) + "?id=eq." + ESP_ID;
+
+ 
+
+  if (http.begin(client, url)) {
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("apikey", API_KEY);
+    http.addHeader("Authorization", String("Bearer ") + API_KEY);
+    http.addHeader("Prefer", "resolution=merge-duplicates");
+
+
+    String payload = "{";
+    payload += "\"id\":\"" + String(ESP_ID) + "\",";
+    payload += "\"data_used_mb\":" + String(mb, 3);
+    payload += "}";
+
+    int code = http.POST(payload);
+    addDataUsage(payload.length());
+
+    
+
+    http.end();
+  }
+}
+
+void clearCommandsOnServer() {
+  if (!ensureWiFi()) {
+    Serial.println("[PATCH] WiFi not OK, skipping");
+    return;
+  }
+
+  HTTPClient http;
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  String url = String(SUPABASE_COMMANDS_URL) + "?id=eq." + ESP_ID;
+
+  Serial.println("----- PATCH DEBUG START -----");
+  Serial.print("PATCH URL: ");
+  Serial.println(url);
+
+  if (http.begin(client, url)) {
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("Accept", "application/json");
+    http.addHeader("apikey", API_KEY);
+    http.addHeader("Authorization", String("Bearer ") + API_KEY);
+    http.addHeader("Prefer", "resolution=merge-duplicates");
+
+    String payload = "{"
+      "\"reset_data_usage\":false,"
+      "\"unblock\":false,"
+      "\"relay_manual\":null"
+    "}";
+
+    Serial.print("PATCH PAYLOAD: ");
+    Serial.println(payload);
+
+    int code = http.PATCH(payload);
+
+    Serial.print("PATCH RESPONSE CODE: ");
+    Serial.println(code);
+
+    String resp = http.getString();
+    Serial.print("PATCH RESPONSE BODY: ");
+    Serial.println(resp);
+
+    http.end();
+  } else {
+    Serial.println("[PATCH] http.begin FAILED");
+  }
+
+  Serial.println("----- PATCH DEBUG END -----");
+}
+
+
+
+
+void checkCommands() {
+  if (!ensureWiFi()) return;
+
+  HTTPClient http;
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  String url = String(SUPABASE_COMMANDS_URL) + "?id=eq." + ESP_ID + "&select=reset_data_usage,unblock,relay_manual";
+
+  if (http.begin(client, url)) {
+    http.addHeader("apikey", API_KEY);
+    http.addHeader("Authorization", String("Bearer ") + API_KEY);
+
+    int code = http.GET();
+    addDataUsage(0);
+
+    if (code == 200) {
+      String body = http.getString();
+
+      bool doReset = body.indexOf("\"reset_data_usage\":true") != -1;
+      bool doUnblock = false;
+int pos = body.indexOf("\"unblock\":");
+
+if (pos != -1) {
+  // paima 20 simbolių po "unblock":
+  String segment = body.substring(pos, pos + 20);
+  segment.toLowerCase();
+
+  if (segment.indexOf("true") != -1) {
+    doUnblock = true;
+  }
+}
+
+
+
+
+      bool relayOnCmd = body.indexOf("\"relay_manual\":\"on\"") != -1;
+      bool relayOffCmd = body.indexOf("\"relay_manual\":\"off\"") != -1;
+      bool relayToggleCmd = body.indexOf("\"relay_manual\":\"toggle\"") != -1;
+
+      if (doReset) {
+        dataUsedBytes = 0;
+      }
+
+      if (doUnblock) {
+        lockdown = false;
+        lockdownReported = false;
+        lastStatusSend = 0;   // ← vietoj sendStatus()
+      }
+
+      if (relayOnCmd) {
+        manualRelayRequest = 1;
+      } else if (relayOffCmd) {
+        manualRelayRequest = 2;
+      } else if (relayToggleCmd) {
+        manualRelayRequest = 3;
+      }
+
+      needClearCommands = true;
+    }
+
+    http.end();
+  }
+}
+
+
+void autoWaterCycle() {
+  if (lockdown) return;
+  if (isWatering) return;
+
+  Serial.println("[AUTO] Dregme maza. Pradedu laistyma.");
+
+  float before = 0;
+  float after = 0;
+
+  for (int attempt = 1; attempt <= 3; attempt++) {
+
+    Serial.printf("[WATER] Bandymas %d\n", attempt);
+
+    refreshSensors();
+    before = lastMoisture;
+
+    relayOn();
+    updateDisplay("LAISTYMAS", lastMoisture, lastTemp, lastPressure);
+    delay(10000);
+    relayOff();
+
+    for (int i = 0; i < 3; i++) {
+      delay(10000);
+      updateDisplay("LAISTYMAS", lastMoisture, lastTemp, lastPressure);
+    }
+
+    refreshSensors();
+    after = lastMoisture;
+
+    if (after >= before + 3.0) {
+      updateDisplay("OK", lastMoisture, lastTemp, lastPressure);
+      Serial.println("[AUTO] Dregme pakilo. Baigiam.");
+      return;
+    }
+  }
+
+  Serial.println("[LOCKDOWN] Dregme nekyla. Pereinam į LOCKDOWN.");
+
+  lockdown = true;
+  lockdownReported = false;
+
+  sendError("dregme nekyla");
+  sendStatus();
+  lockdownReported = true;
+
+  updateDisplay("LOCK DOWN", lastMoisture, lastTemp, lastPressure);
+}
+
+void setup() {
+  Serial.begin(115200);
+  delay(200);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
+  WiFi.begin(ssid, password);
+
+  Serial.println("Connecting WiFi...");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(200);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi OK");
+
+  // NTP po WiFi
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  Serial.println("Syncing time...");
+  delay(2000);
+
+  time_t now = time(nullptr);
+  while (now < 100000) {
+    delay(500);
+    Serial.print(".");
+    now = time(nullptr);
+  }
+  Serial.println("\nTime synced!");
+
+  // OLED tik po NTP
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.display();
+
+  // BMP
+  bmp.begin(0x77);
+
+  refreshSensors();
+  updateDisplay("OK", lastMoisture, lastTemp, lastPressure);
+
+  pinMode(RELAY_PIN, OUTPUT);
+  relayOff();
+
+  randomSeed(analogRead(MOISTURE_PIN));
+
+  sendStatus();
+sendDataUsage();
+checkCommands();
+lastStatusSend = millis();
+}
+
+
+void loop() {
+  unsigned long now = millis();
+
+  // Sensorių atnaujinimas kas 5 sekundes
+  static unsigned long lastCheck = 0;
+  if (now - lastCheck > 5000) {
+    lastCheck = now;
+
+    refreshSensors();
+
+    // Manual relay komandos
+    if (manualRelayRequest == 1) {
+      relayOn();
+      manualRelayRequest = 0;
+    }
+    else if (manualRelayRequest == 2) {
+      relayOff();
+      manualRelayRequest = 0;
+    }
+    else if (manualRelayRequest == 3) {
+      if (isWatering) relayOff();
+      else relayOn();
+      manualRelayRequest = 0;
+    }
+
+    // Ekranas
+    if (isWatering) {
+      updateDisplay("LAISTYMAS", lastMoisture, lastTemp, lastPressure);
+    }
+    else if (lockdown) {
+      updateDisplay("LOCK DOWN", lastMoisture, lastTemp, lastPressure);
+    }
+    else if (lastMoisture < 30.0) {
+      autoWaterCycle();
+    }
+    else {
+      updateDisplay("OK", lastMoisture, lastTemp, lastPressure);
+    }
+  }
+
+  // Statuso siuntimas
+  if ((now - lastStatusSend > STATUS_INTERVAL || lastStatusSend == 0)) {
+
+    if (ensureWiFi()) {
+      sendStatus();
+      sendDataUsage();
+      checkCommands();
+    }
+
+    lastStatusSend = now;
+  }
+
+  // PATCH vykdomas tik čia — SAUGIAI
+  if (needClearCommands) {
+    clearCommandsOnServer();
+    needClearCommands = false;
+  }
+}
