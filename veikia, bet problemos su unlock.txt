@@ -50,7 +50,7 @@ int manualRelayRequest = 0;
 // 2 = OFF
 // 3 = TOGGLE
 bool needClearCommands = false;
-bool unblockConsumed = false; 
+
 
 
 
@@ -296,17 +296,19 @@ void clearCommandsOnServer() {
   Serial.println(url);
 
   if (http.begin(client, url)) {
-    http.addHeader("Content-Type", "application/json");
-    http.addHeader("Accept", "application/json");
-    http.addHeader("apikey", API_KEY);
-    http.addHeader("Authorization", String("Bearer ") + API_KEY);
-    http.addHeader("Prefer", "resolution=merge-duplicates");
+   
+http.addHeader("Content-Type", "application/json");
+http.addHeader("apikey", API_KEY);
+http.addHeader("Authorization", String("Bearer ") + API_KEY);
+http.addHeader("Prefer", "return=minimal");  // ✅ SVARBIAUSIA
+
 
     
+
 String payload = "{"
-  "\"reset_data_usage\":false,"
   "\"unblock\":false"
 "}";
+
 
 
     Serial.print("PATCH PAYLOAD: ");
@@ -377,13 +379,16 @@ if (pos != -1) {
       }
 
    
-if (doUnblock && !unblockConsumed) {
+
+if (doUnblock) {
   lockdown = false;
   lockdownReported = false;
   lastStatusSend = 0;
 
-  unblockConsumed = true;  // ✅ NELEIDŽIA kartotis
+  // ✅ IŠKART NUIMAM UNLOCK SERVERYJE
+  clearCommandsOnServer();
 }
+
 
 
       if (relayOnCmd) {
