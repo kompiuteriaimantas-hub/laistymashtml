@@ -50,6 +50,7 @@ int manualRelayRequest = 0;
 // 2 = OFF
 // 3 = TOGGLE
 bool needClearCommands = false;
+bool unblockConsumed = false; 
 
 
 
@@ -301,11 +302,12 @@ void clearCommandsOnServer() {
     http.addHeader("Authorization", String("Bearer ") + API_KEY);
     http.addHeader("Prefer", "resolution=merge-duplicates");
 
-    String payload = "{"
-      "\"reset_data_usage\":false,"
-      "\"unblock\":false,"
-      "\"relay_manual\":null"
-    "}";
+    
+String payload = "{"
+  "\"reset_data_usage\":false,"
+  "\"unblock\":false"
+"}";
+
 
     Serial.print("PATCH PAYLOAD: ");
     Serial.println(payload);
@@ -374,11 +376,15 @@ if (pos != -1) {
         dataUsedBytes = 0;
       }
 
-      if (doUnblock) {
-        lockdown = false;
-        lockdownReported = false;
-        lastStatusSend = 0;   // ← vietoj sendStatus()
-      }
+   
+if (doUnblock && !unblockConsumed) {
+  lockdown = false;
+  lockdownReported = false;
+  lastStatusSend = 0;
+
+  unblockConsumed = true;  // ✅ NELEIDŽIA kartotis
+}
+
 
       if (relayOnCmd) {
         manualRelayRequest = 1;
@@ -432,10 +438,13 @@ void autoWaterCycle() {
     }
   }
 
-  Serial.println("[LOCKDOWN] Dregme nekyla. Pereinam į LOCKDOWN.");
+  
+Serial.println("[LOCKDOWN] Dregme nekyla. Pereinam į LOCKDOWN.");
 
-  lockdown = true;
-  lockdownReported = false;
+lockdown = true;
+lockdownReported = false;
+unblockConsumed = false;   // ✅ LEIDŽIA kitą unlock
+
 
   sendError("dregme nekyla");
   sendStatus();
