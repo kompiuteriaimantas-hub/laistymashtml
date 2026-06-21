@@ -715,7 +715,7 @@ db.channel('status-changes')
   // ✅ backup polling (kas 60s – saugumas)
   //setInterval(checkRealtimeStatus, 60000);
 }
-``
+
 async function checkSession() {
   const { data } = await db.auth.getUser();
   if (data && data.user) {
