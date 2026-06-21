@@ -538,7 +538,7 @@ async function checkRealtimeStatus() {
     setOnlineBadge(true);
   }
 }
-``
+
 
 async function loadDayData(dateStr) {
   dayTableBody.innerHTML = `<tr><td colspan="7">Kraunama...</td></tr>`;
@@ -745,7 +745,6 @@ btnLogin.onclick = async () => {
 btnLogout.onclick = async () => {
   await db.auth.signOut();
   appInitialized = false;
-  checkSession();
 };
 
 (async function init() {
@@ -755,7 +754,6 @@ btnLogout.onclick = async () => {
 </script>
 
 
-
-
 </body>
 </html>
+
