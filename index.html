@@ -577,33 +577,40 @@ async function loadDayData(dateStr) {
   dayTableBody.innerHTML = "";
   let totalMb = 0;
 
-  data.forEach((row) => {
-    const tr = document.createElement("tr");
+// --- SUMAVIMAS KB ---
+let totalKb = 0;
 
-    tr.innerHTML = `
-      <td>${new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-      <td>${row.temp?.toFixed(1) ?? "–"}</td>
-      <td>${row.moisture?.toFixed(1) ?? "–"}</td>
-      <td>${row.pressure?.toFixed(0) ?? "–"}</td>
-      <td class="text-right">${
-  row.data_used_kb >= 1024
-    ? (row.data_used_kb / 1024).toFixed(3) + " MB"
-    : row.data_used_kb.toFixed(0) + " KB"
-}</td>
-      <td><span class="pill ${row.lockdown ? "pill-bad" : "pill-ok"}">${row.lockdown ? "Taip" : "Ne"}</span></td>
-      <td><span class="pill ${row.offline ? "pill-bad" : "pill-ok"}">${row.offline ? "Taip" : "Ne"}</span></td>
-    `;
+data.forEach((row) => {
+  const tr = document.createElement("tr");
 
-    totalMb += row.data_used_mb ?? 0;
-    dayTableBody.appendChild(tr);
-  });
+  const kb = row.data_used_kb ?? 0;
 
-  // ❌ SVARBU: NEBEKEISK BADGE ČIA
-  // setLockdownBadge(!!last.lockdown);  ← PALIK IŠTRINTĄ
+  tr.innerHTML = `
+    <td>${new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+    <td>${row.temp?.toFixed(1) ?? "–"}</td>
+    <td>${row.moisture?.toFixed(1) ?? "–"}</td>
+    <td>${row.pressure?.toFixed(0) ?? "–"}</td>
+    <td class="text-right">${
+      kb >= 1024
+        ? (kb / 1024).toFixed(3) + " MB"
+        : kb.toFixed(0) + " KB"
+    }</td>
+    <td><span class="pill ${row.lockdown ? "pill-bad" : "pill-ok"}">${row.lockdown ? "Taip" : "Ne"}</span></td>
+    <td><span class="pill ${row.offline ? "pill-bad" : "pill-ok"}">${row.offline ? "Taip" : "Ne"}</span></td>
+  `;
 
-  daySummary.textContent = `Įrašų: ${data.length}, bendrai ~${totalMb.toFixed(3)} MB`;
-}
-``
+  totalKb += kb;
+  dayTableBody.appendChild(tr);
+});
+
+// --- DIENOS SANTRAUKA ---
+let summaryText =
+  totalKb >= 1024
+    ? (totalKb / 1024).toFixed(3) + " MB"
+    : totalKb.toFixed(0) + " KB";
+
+daySummary.textContent = `Įrašų: ${data.length}, bendrai ~${summaryText}`;
+
 
 
 async function sendCommand(patch) {
