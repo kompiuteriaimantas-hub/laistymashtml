@@ -714,6 +714,7 @@ db.channel('status-changes')
 
   // ✅ backup polling (kas 60s – saugumas)
   //setInterval(checkRealtimeStatus, 60000);
+  }
 
 
 async function checkSession() {
@@ -749,7 +750,7 @@ btnLogout.onclick = async () => {
 
 (async function init() {
   await checkSession(); 
-});
+})();
 
 </script>
 
