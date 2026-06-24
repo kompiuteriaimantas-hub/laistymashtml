@@ -1,1 +1,826 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <title>ESP1 Augalų Panelė</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f4f0e8;
+      --card: #ffffff;
+      --accent: #4b7f52;
+      --accent-soft: #7fa87f;
+      --danger: #c0392b;
+      --text: #2c3e50;
+      --muted: #7f8c8d;
+    }
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top left, #d9f0d0 0, #f4f0e8 40%, #f4f0e8 100%);
+      color: var(--text);
+    }
+    .leaf-bg::before,
+    .leaf-bg::after {
+      content: "";
+      position: fixed;
+      width: 260px;
+      height: 260px;
+      border-radius: 60% 40% 70% 30%;
+      background: radial-gradient(circle at 30% 20%, #a6d8a0 0, transparent 60%);
+      opacity: 0.25;
+      z-index: -1;
+    }
+    .leaf-bg::before { top: -80px; left: -60px; }
+    .leaf-bg::after { bottom: -80px; right: -60px; transform: scaleX(-1); }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .title span.leaf { font-size: 1.6rem; }
+
+    .status-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .badge-online .badge-dot { background: #27ae60; }
+    .badge-offline .badge-dot { background: #e74c3c; }
+    .badge-lockdown-yes { color: #fff; background: var(--danger); }
+    .badge-lockdown-no { color: #fff; background: var(--accent); }
+
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+      margin-bottom: 16px;
+      border: 1px solid rgba(0, 0, 0, 0.03);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-title span.icon { font-size: 1.1rem; }
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+      outline: none;
+    }
+    button:active { transform: translateY(1px); box-shadow: none; }
+    .btn-green {
+      background: linear-gradient(135deg, #4b7f52, #7fa87f);
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(75, 127, 82, 0.4);
+    }
+    .btn-amber {
+      background: linear-gradient(135deg, #d4a017, #f1c40f);
+      color: #4a3b0a;
+      box-shadow: 0 4px 10px rgba(212, 160, 23, 0.4);
+    }
+    .btn-red {
+      background: linear-gradient(135deg, #c0392b, #e74c3c);
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(192, 57, 43, 0.4);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      color: var(--text);
+      box-shadow: none;
+    }
+
+    input[type="date"],
+    input[type="email"],
+    input[type="password"] {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      font-size: 0.85rem;
+      background: rgba(255, 255, 255, 0.9);
+      outline: none;
+    }
+
+    .table-wrapper { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    thead { background: #f0f5ef; }
+    th, td {
+      padding: 6px 8px;
+      text-align: left;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      white-space: nowrap;
+    }
+    th {
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    tbody tr:nth-child(even) { background: rgba(0, 0, 0, 0.01); }
+    .text-right { text-align: right; }
+
+    .pill {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      display: inline-block;
+    }
+    .pill-ok { background: rgba(39, 174, 96, 0.12); color: #27ae60; }
+    .pill-bad { background: rgba(192, 57, 43, 0.12); color: #c0392b; }
+
+    .footer-note {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .auth-card {
+      max-width: 360px;
+      margin: 40px auto;
+      text-align: center;
+    }
+    .auth-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    .auth-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .auth-subtitle {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 640px) {
+      header { align-items: flex-start; }
+      .card { padding: 12px 12px; }
+    }
+  </style>
+</head>
+<body class="leaf-bg">
+  <div class="container">
+
+    <!-- AUTH BLOKAS -->
+    <div id="auth">
+      <div class="card auth-card">
+        <div class="auth-title">Prisijungimas</div>
+        <div class="auth-subtitle">Supabase vartotojas, kuris gali valdyti ESP1.</div>
+        <div class="auth-fields">
+          <input type="email" id="authEmail" placeholder="El. paštas" />
+          <input type="password" id="authPassword" placeholder="Slaptažodis" />
+        </div>
+        <button id="btnLogin" class="btn-green" style="width:100%; justify-content:center;">
+          Prisijungti
+        </button>
+        <div class="footer-note">
+          Vartotoją susikurk Supabase Auth skiltyje. Šis puslapis naudoja anon key, o ne service_role.
+        </div>
+      </div>
+    </div>
+
+    <!-- APP BLOKAS -->
+    <div id="app" style="display:none;">
+      <header>
+        <div class="title">
+          <span class="leaf">🌿</span>
+          <span>Sodas agarodas laistymo sistema</span>
+        </div>
+        <div class="status-badges">
+          <div id="badge-online" class="badge badge-online">
+            <span class="badge-dot"></span>
+            <span id="online-text">Online</span>
+          </div>
+          <div id="lastSeenText">📡 Paskutinis signalas: –</div>
+          <div id="badge-lockdown" class="badge badge-lockdown-no">
+            <span>LOCKDOWN:</span>
+            <strong id="lockdown-text">Ne</strong>
+          </div>
+          <button id="btnLogout" class="btn-outline">Atsijungti</button>
+        </div>
+      </header>
+
+      <!-- Data pasirinkimas -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="icon">📅</span>
+            <span>Dienos pasirinkimas</span>
+          </div>
+          <div>
+            <input type="date" id="datePicker" />
+          </div>
+        </div>
+        <div class="card-subtitle">
+          Pasirink dieną, kad matytum valandinius matavimus ir duomenų sunaudojimą.
+        </div>
+      </div>
+
+      <!-- Kontrolės mygtukai -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="icon">🧰</span>
+            <span>Valdymas</span>
+          </div>
+        </div>
+        <div class="controls-row">
+          <button id="btnUnblock" class="btn-red">
+            🔓 Atrakinti (UNBLOCK)
+          </button>
+          <button id="btnRelayToggle" class="btn-green">
+            💧 Rankinis laistymas
+          </button>
+          
+<div id="wateringBox" style="display:none; margin-top:10px;">
+  <div style="font-size: 0.8rem; margin-bottom: 4px;">
+    💧 Laistoma...
+  </div>
+  <div style="width:100%; height:10px; background:#ddd; border-radius:10px; overflow:hidden;">
+    <div id="wateringBar" style="height:100%; width:0%; background:#4b7f52;"></div>
+  </div>
+  <div id="wateringText" style="font-size:0.75rem; margin-top:4px;">
+    –
+  </div>
+</div>
+
+          <button id="btnResetData" class="btn-amber">
+            ♻️ Reset duomenims
+          </button>
+          <a href="grafikas.html">
+  <button class="btn-graph">📊 Grafikas</button>
+            <div id="nextUpdate">⏳ Kitas atnaujinimas: ...</div>
+</a>
+
+        </div>
+        
+      </div>
+
+      <!-- Dienos lentelė -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="icon">📊</span>
+            <span>Dienos valandiniai duomenys</span>
+          </div>
+          <div class="card-subtitle" id="daySummary">
+            –
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Valanda</th>
+                <th>Temperatūra (°C)</th>
+                <th>Drėgmė (%)</th>
+                <th>Slėgis (hPa)</th>
+                <th class="text-right">Duomenys (MB)</th>
+                <th>Lockdown</th>
+                <th>Offline</th>
+              </tr>
+            </thead>
+            <tbody id="dayTableBody">
+              <!-- Pildoma JS -->
+            </tbody>
+          </table>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+const ESP_ID = "esp1";
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const authDiv = document.getElementById("auth");
+const appDiv = document.getElementById("app");
+
+const authEmail = document.getElementById("authEmail");
+const authPassword = document.getElementById("authPassword");
+const btnLogin = document.getElementById("btnLogin");
+const btnLogout = document.getElementById("btnLogout");
+
+const datePicker = document.getElementById("datePicker");
+const dayTableBody = document.getElementById("dayTableBody");
+const daySummary = document.getElementById("daySummary");
+const badgeOnline = document.getElementById("badge-online");
+const onlineText = document.getElementById("online-text");
+const badgeLockdown = document.getElementById("badge-lockdown");
+const lockdownText = document.getElementById("lockdown-text");
+
+const btnUnblock = document.getElementById("btnUnblock");
+const btnRelayToggle = document.getElementById("btnRelayToggle");
+const btnResetData = document.getElementById("btnResetData");
+
+  
+let wateringActive = false;
+let wateringStart = 0;
+const WATER_DURATION = 10000; // 10s
+
+  
+function showToast(msg, color = "red") {
+  const el = document.createElement("div");
+
+  el.textContent = msg;
+  el.style.position = "fixed";
+  el.style.bottom = "20px";
+  el.style.right = "20px";
+  el.style.background = color;
+  el.style.color = "white";
+  el.style.padding = "10px 14px";
+  el.style.borderRadius = "10px";
+  el.style.boxShadow = "0 5px 15px rgba(0,0,0,0.2)";
+  el.style.zIndex = 9999;
+  el.style.fontSize = "14px";
+
+  document.body.appendChild(el);
+
+  setTimeout(() => {
+    el.remove();
+  }, 4000);
+}
+
+
+let appInitialized = false;
+
+  let lastSeenGlobal = null;
+
+  
+let lastLockdownState = false;
+let lastOfflineState = false;
+
+  
+function updateWateringBar() {
+  if (!wateringActive) return;
+
+  const now = Date.now();
+  const diff = now - wateringStart;
+
+  const percent = Math.min((diff / WATER_DURATION) * 100, 100);
+  const remaining = Math.max(0, Math.ceil((WATER_DURATION - diff) / 1000));
+
+  document.getElementById("wateringBar").style.width = percent + "%";
+  document.getElementById("wateringText").textContent =
+    remaining > 0 ? `Liko ${remaining}s` : "Baigta";
+
+  if (diff >= WATER_DURATION) {
+    wateringActive = false;
+    setTimeout(() => {
+      document.getElementById("wateringBox").style.display = "none";
+    }, 1500);
+  }
+}
+
+
+
+function updateLastSeenTimer() {
+  if (!lastSeenGlobal) return;
+
+  const text = formatLastSeen(lastSeenGlobal);
+  document.getElementById("lastSeenText").textContent =
+    "📡 Paskutinis signalas: " + text;
+}
+
+setInterval(updateLastSeenTimer, 1000);
+
+  function formatLastSeen(timestamp) {
+  const diffSec = Math.floor((Date.now() - timestamp) / 1000);
+
+  if (diffSec < 60) {
+    return `prieš ${diffSec}s`;
+  }
+
+  const min = Math.floor(diffSec / 60);
+  if (min < 60) {
+    return `prieš ${min} min`;
+  }
+
+  const hours = Math.floor(min / 60);
+  return `prieš ${hours} val`;
+}
+
+function setLockdownBadge(isLockdown) {
+  if (isLockdown) {
+    badgeLockdown.classList.remove("badge-lockdown-no");
+    badgeLockdown.classList.add("badge-lockdown-yes");
+    lockdownText.textContent = "Taip";
+  } else {
+    badgeLockdown.classList.remove("badge-lockdown-yes");
+    badgeLockdown.classList.add("badge-lockdown-no");
+    lockdownText.textContent = "Ne";
+  }
+}
+
+function setOnlineBadge(isOffline) {
+  if (isOffline) {
+    badgeOnline.classList.remove("badge-online");
+    badgeOnline.classList.add("badge-offline");
+    onlineText.textContent = "Offline";
+  } else {
+    badgeOnline.classList.remove("badge-offline");
+    badgeOnline.classList.add("badge-online");
+    onlineText.textContent = "Online";
+  }
+}
+
+// --- REALTIME OFFLINE DETEKTAVIMAS ---
+async function checkRealtimeStatus() {
+  try {
+    const { data } = await db
+      .from("status")
+      .select("*")
+      .eq("id", ESP_ID)
+      .maybeSingle();
+
+    if (!data) {
+      setOnlineBadge(true);
+      return;
+    }
+
+    const lastSeen = new Date(
+      data.updated_at || data.timestamp || data.created_at
+    ).getTime();
+
+    lastSeenGlobal = lastSeen;
+
+    document.getElementById("lastSeenText").textContent =
+      "📡 Paskutinis signalas: " + formatLastSeen(lastSeen);
+
+    const diffSec = (Date.now() - lastSeen) / 1000;
+    const isOffline = diffSec > 60;
+
+    setOnlineBadge(isOffline);
+
+    if (data.lockdown !== undefined) {
+      setLockdownBadge(data.lockdown === true);
+    }
+
+  } catch (e) {
+    console.log("Realtime error:", e);
+    setOnlineBadge(true);
+  }
+}
+
+
+async function loadDayData(dateStr) {
+  dayTableBody.innerHTML = `<tr><td colspan="7">Kraunama...</td></tr>`;
+  daySummary.textContent = "Kraunama...";
+
+  // ✅ Teisingas LT → UTC konvertavimas
+  const start = new Date(dateStr);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(dateStr);
+  end.setHours(23, 59, 59, 999);
+
+ 
+
+  const { data, error } = await db
+    .from("status_log") // ✅ TEISINGA: čia turi būti log, ne status
+    .select("*")
+    .eq("id", ESP_ID)
+    .gte("timestamp", start.toISOString())
+    .lte("timestamp", end.toISOString())
+    .order("timestamp", { ascending: true });
+
+  if (error) {
+    console.log("LOAD ERROR:", error);
+    dayTableBody.innerHTML = `<tr><td colspan="7">Klaida kraunant duomenis</td></tr>`;
+    daySummary.textContent = "Klaida";
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    dayTableBody.innerHTML = `<tr><td colspan="7">Nėra duomenų šiai dienai</td></tr>`;
+    daySummary.textContent = "Nėra duomenų";
+    return;
+  }
+
+  dayTableBody.innerHTML = "";
+  let totalMb = 0;
+
+// --- SUMAVIMAS KB ---
+let totalKb = 0;
+
+data.forEach((row) => {
+  const tr = document.createElement("tr");
+
+  const kb = row.data_used_kb ?? 0;
+
+  tr.innerHTML = `
+    <td>${new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+    <td>${row.temp?.toFixed(1) ?? "–"}</td>
+    <td>${row.moisture?.toFixed(1) ?? "–"}</td>
+    <td>${row.pressure?.toFixed(0) ?? "–"}</td>
+    <td class="text-right">${
+      kb >= 1024
+        ? (kb / 1024).toFixed(3) + " MB"
+        : kb.toFixed(0) + " KB"
+    }</td>
+    <td><span class="pill ${row.lockdown ? "pill-bad" : "pill-ok"}">${row.lockdown ? "Taip" : "Ne"}</span></td>
+    <td><span class="pill ${row.offline ? "pill-bad" : "pill-ok"}">${row.offline ? "Taip" : "Ne"}</span></td>
+  `;
+
+  totalKb += kb;
+  dayTableBody.appendChild(tr);
+});
+
+// --- DIENOS SANTRAUKA ---
+let summaryText =
+  totalKb >= 1024
+    ? (totalKb / 1024).toFixed(3) + " MB"
+    : totalKb.toFixed(0) + " KB";
+
+daySummary.textContent = `Įrašų: ${data.length}, bendrai ~${summaryText}`;}
+
+
+
+async function sendCommand(patch) {
+  const { error } = await db
+    .from("commands")
+    .update(patch)
+    .eq("id", ESP_ID);
+
+  if (error) alert("Klaida siunčiant komandą");
+  else alert("Komanda išsaugota.");
+}
+
+
+function initAppOnce() {
+  console.log("INIT STARTED");
+  if (appInitialized) return;
+  appInitialized = true;
+
+  const today = new Date();
+  datePicker.value = today.toISOString().slice(0,10);
+  loadDayData(datePicker.value);
+
+  datePicker.onchange = () => loadDayData(datePicker.value);
+
+  btnUnblock.onclick = () => sendCommand({ unblock: true });
+  
+btnRelayToggle.onclick = () => {
+  sendCommand({ relay_manual: "WATER_10S" });
+
+  // start UI progress
+  wateringActive = true;
+  wateringStart = Date.now();
+
+  document.getElementById("wateringBox").style.display = "block";
+};
+
+  btnResetData.onclick = () => sendCommand({ reset_data_usage: true });
+
+  // ✅ pirmas status užkrovimas
+  checkRealtimeStatus();
+
+  // ✅ REALTIME (instant update 🔥)
+ 
+db.channel('status-changes')
+  .on(
+    'postgres_changes',
+    {
+      event: '*',   // 🔥 svarbu
+      schema: 'public',
+      table: 'status',
+      filter: `id=eq.${ESP_ID}`
+    },
+    (payload) => {
+
+      const data = payload.new;
+      if (!data) return;
+      
+lastUpdateTime = new Date(
+  data.updated_at || data.timestamp || data.created_at
+).getTime();
+
+
+      console.log("REALTIME:", data);
+
+      const lastSeen = new Date(
+        data.updated_at || data.timestamp || data.created_at
+      ).getTime();
+
+      lastSeenGlobal = lastSeen;
+
+      const diffSec = (Date.now() - lastSeen) / 1000;
+      const isOffline = diffSec > 60;
+
+      // 🔒 LOCKDOWN toast
+      if (data.lockdown === true && lastLockdownState === false) {
+        showToast("🔒 LOCKDOWN – patikrink sistemą!", "red");
+      }
+
+      if (data.lockdown === false && lastLockdownState === true) {
+        showToast("✅ LOCKDOWN išjungtas", "green");
+      }
+
+      // 📡 OFFLINE toast
+      if (isOffline && !lastOfflineState) {
+        showToast("⚠️ ESP OFFLINE!", "orange");
+      }
+
+      if (!isOffline && lastOfflineState) {
+        showToast("✅ ESP ONLINE", "green");
+      }
+
+      // update states
+      lastLockdownState = data.lockdown === true;
+      lastOfflineState = isOffline;
+
+      // UI update
+      document.getElementById("lastSeenText").textContent =
+        "📡 Paskutinis signalas: " + formatLastSeen(lastSeen);
+
+      setOnlineBadge(isOffline);
+      setLockdownBadge(data.lockdown === true);
+    }
+  )
+  .subscribe();
+
+
+  // ✅ backup polling (kas 60s – saugumas)
+  //setInterval(checkRealtimeStatus, 60000);
+  }
+
+
+async function checkSession() {
+  const { data } = await db.auth.getUser();
+  if (data && data.user) {
+    authDiv.style.display = "none";
+    appDiv.style.display = "block";
+    initAppOnce();
+
+    
+  } else {
+    authDiv.style.display = "block";
+    appDiv.style.display = "none";
+  }
+}
+
+btnLogin.onclick = async () => {
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+
+  if (!email || !password) return alert("Įvesk el. paštą ir slaptažodį");
+
+  const { error } = await db.auth.signInWithPassword({ email, password });
+  if (error) return alert("Prisijungimo klaida");
+
+  checkSession();
+};
+
+btnLogout.onclick = async () => {
+  await db.auth.signOut();
+  appInitialized = false;
+};
+
+(async function init() {
+  await checkSession(); 
+})();
+
+  // ================== UPDATE TIMER ==================
+
+let lastUpdateTime = null;
+
+// pasiimam paskutinį įrašą iš DB
+async function initUpdateTimer() {
+
+  const { data, error } = await db
+    .from("status_log")
+    .select("timestamp")
+    .eq("id", ESP_ID)
+    .order("timestamp", { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) {
+    document.getElementById("nextUpdate").textContent =
+      "❌ Nerasta duomenų";
+    return;
+  }
+
+  // paskutinis update
+  lastUpdateTime = new Date(data[0].timestamp).getTime();
+
+  startCountdown();
+}
+
+// countdown funkcija
+function startCountdown() {
+
+  setInterval(() => {
+
+    if (!lastUpdateTime) return;
+
+    const now = Date.now();
+
+    // sekantis update po 1h
+    const next = lastUpdateTime + (60 * 60 * 1000);
+
+    let diff = next - now;
+
+    if (diff <= 0) {
+      document.getElementById("nextUpdate").textContent =
+        "🔄 Laukiamas naujas įrašas...";
+      return;
+    }
+
+    const h = Math.floor(diff / 1000 / 60 / 60);
+    const m = Math.floor((diff / 1000 / 60) % 60);
+    const s = Math.floor((diff / 1000) % 60);
+
+    document.getElementById("nextUpdate").textContent =
+      `⏳ Kitas atnaujinimas po: ${h}h ${m}m ${s}s`;
+
+  }, 1000);
+}
+
+// paleidimas
+initUpdateTimer();
+
+</script>
+
+
+</body>
+</html>
+
 
