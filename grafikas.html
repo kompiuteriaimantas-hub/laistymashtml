@@ -80,23 +80,23 @@ canvas{
 
 </div>
 
+
+<!-- LIBRARIES -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
 
-// ================= CONFIG =================
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+const SUPABASE_KEY = "TAVO_ANON_KEY"; // <-- įrašyk savo
 const ESP_ID = "esp1";
 
-// ===========================================
-
-const { createClient } = supabase;
+// ✅ teisingas init
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const ctx = document.getElementById("chart");
-
 let chart;
 
-// užkrauti grafiką
 async function loadData(dateStr){
 
   const start = new Date(dateStr);
@@ -129,63 +129,28 @@ async function loadData(dateStr){
   if(chart) chart.destroy();
 
   chart = new Chart(ctx, {
-    type: 'line',
+    type:'line',
     data:{
       labels,
       datasets:[
-        {
-          label:"Temperatūra °C",
-          data: temp,
-          borderColor:"#ef4444",
-          tension:0.3
-        },
-        {
-          label:"Drėgmė %",
-          data: moisture,
-          borderColor:"#3b82f6",
-          tension:0.3
-        },
-        {
-          label:"Slėgis hPa",
-          data: pressure,
-          borderColor:"#22c55e",
-          tension:0.3
-        }
+        { label:"Temp", data:temp, borderColor:"#ef4444", tension:0.3 },
+        { label:"Drėgmė", data:moisture, borderColor:"#3b82f6", tension:0.3 },
+        { label:"Slėgis", data:pressure, borderColor:"#22c55e", tension:0.3 }
       ]
-    },
-    options:{
-      responsive:true,
-      plugins:{
-        legend:{
-          labels:{color:"#e5e7eb"}
-        }
-      },
-      scales:{
-        x:{
-          ticks:{color:"#9ca3af"}
-        },
-        y:{
-          ticks:{color:"#9ca3af"}
-        }
-      }
     }
   });
 }
 
-// ================= INIT =================
-
 const datePicker = document.getElementById("datePicker");
-
 const today = new Date().toISOString().slice(0,10);
-datePicker.value = today;
 
+datePicker.value = today;
 datePicker.onchange = () => loadData(datePicker.value);
 
 loadData(today);
 
 </script>
 
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
 </body>
 </html>
