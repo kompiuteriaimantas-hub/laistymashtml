@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<title>Grafikų panelė</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --bg:#0f172a;
+  --card:#111827;
+  --accent:#22c55e;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+}
+
+body{
+  margin:0;
+  background:linear-gradient(135deg,#0f172a,#020617);
+  color:var(--text);
+  font-family:sans-serif;
+}
+
+.container{
+  max-width:1000px;
+  margin:auto;
+  padding:20px;
+}
+
+.card{
+  background:var(--card);
+  border-radius:16px;
+  padding:20px;
+  margin-bottom:20px;
+  box-shadow:0 20px 40px rgba(0,0,0,0.4);
+}
+
+.title{
+  font-size:22px;
+  font-weight:700;
+  margin-bottom:10px;
+}
+
+.subtitle{
+  color:var(--muted);
+  font-size:14px;
+}
+
+input[type="date"]{
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  background:#1f2937;
+  color:white;
+  font-size:14px;
+}
+
+canvas{
+  margin-top:15px;
+}
+
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="card">
+  <div class="title">📊 Augalų grafikai</div>
+  <div class="subtitle">Pasirink dieną</div>
+  <br>
+  <input type="date" id="datePicker">
+</div>
+
+<div class="card">
+  <canvas id="chart"></canvas>
+</div>
+
+</div>
+
+<script>
+
+// ================= CONFIG =================
+const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
+const SUPABASE_KEY = "TAVO_ANON_KEY";
+const ESP_ID = "esp1";
+
+// ===========================================
+
+const { createClient } = supabase;
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const ctx = document.getElementById("chart");
+
+let chart;
+
+// užkrauti grafiką
+async function loadData(dateStr){
+
+  const start = new Date(dateStr);
+  start.setHours(0,0,0,0);
+
+  const end = new Date(dateStr);
+  end.setHours(23,59,59,999);
+
+  const { data } = await db
+    .from("status_log")
+    .select("*")
+    .eq("id", ESP_ID)
+    .gte("timestamp", start.toISOString())
+    .lte("timestamp", end.toISOString())
+    .order("timestamp");
+
+  if(!data || data.length === 0){
+    alert("Nėra duomenų");
+    return;
+  }
+
+  const labels = data.map(r =>
+    new Date(r.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
+  );
+
+  const temp = data.map(r => r.temp);
+  const moisture = data.map(r => r.moisture);
+  const pressure = data.map(r => r.pressure);
+
+  if(chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:"Temperatūra °C",
+          data: temp,
+          borderColor:"#ef4444",
+          tension:0.3
+        },
+        {
+          label:"Drėgmė %",
+          data: moisture,
+          borderColor:"#3b82f6",
+          tension:0.3
+        },
+        {
+          label:"Slėgis hPa",
+          data: pressure,
+          borderColor:"#22c55e",
+          tension:0.3
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{
+          labels:{color:"#e5e7eb"}
+        }
+      },
+      scales:{
+        x:{
+          ticks:{color:"#9ca3af"}
+        },
+        y:{
+          ticks:{color:"#9ca3af"}
+        }
+      }
+    }
+  });
+}
+
+// ================= INIT =================
+
+const datePicker = document.getElementById("datePicker");
+
+const today = new Date().toISOString().slice(0,10);
+datePicker.value = today;
+
+datePicker.onchange = () => loadData(datePicker.value);
+
+loadData(today);
+
+</script>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+</body>
+</html>
