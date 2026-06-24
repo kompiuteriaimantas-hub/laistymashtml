@@ -228,6 +228,45 @@
       header { align-items: flex-start; }
       .card { padding: 12px 12px; }
     }
+
+    /* KPI */
+.kpi-row{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:16px;
+}
+
+.kpi-card{
+  flex:1;
+  min-width:130px;
+  padding:14px;
+  border-radius:18px;
+  color:white;
+  text-align:center;
+  font-weight:600;
+  box-shadow:0 10px 20px rgba(0,0,0,0.1);
+  transition:0.2s;
+}
+
+.kpi-card:hover{
+  transform:translateY(-3px);
+}
+
+.kpi-value{
+  font-size:20px;
+  margin-top:5px;
+}
+
+.kpi-label{
+  font-size:12px;
+  opacity:0.85;
+}
+
+.temp{ background:linear-gradient(135deg,#e74c3c,#ff6b6b);}
+.moist{ background:linear-gradient(135deg,#3498db,#74b9ff);}
+.press{ background:linear-gradient(135deg,#27ae60,#55efc4);}
+.status{ background:linear-gradient(135deg,#636e72,#b2bec3);}
   </style>
 </head>
 <body class="leaf-bg">
@@ -271,7 +310,34 @@
           <button id="btnLogout" class="btn-outline">Atsijungti</button>
         </div>
       </header>
+<!-- ✅ KPI BLOKAS -->
+<div class="kpi-row">
 
+  <div class="kpi-card temp">
+    🌡
+    <div class="kpi-value" id="kpiTemp">--</div>
+    <div class="kpi-label">Temperatūra</div>
+  </div>
+
+  <div class="kpi-card moist">
+    💧
+    <div class="kpi-value" id="kpiMoist">--</div>
+    <div class="kpi-label">Drėgmė</div>
+  </div>
+
+  <div class="kpi-card press">
+    📈
+    <div class="kpi-value" id="kpiPress">--</div>
+    <div class="kpi-label">Slėgis</div>
+  </div>
+
+  <div class="kpi-card status">
+    📡
+    <div class="kpi-value" id="kpiStatus">--</div>
+    <div class="kpi-label">Statusas</div>
+  </div>
+
+</div>
       <!-- Data pasirinkimas -->
       <div class="card">
         <div class="card-header">
@@ -670,6 +736,16 @@ db.channel('status-changes')
     (payload) => {
 
       const data = payload.new;
+      
+document.getElementById("kpiTemp").textContent =
+  data.temp?.toFixed(1) + "°C";
+
+document.getElementById("kpiMoist").textContent =
+  data.moisture?.toFixed(1) + "%";
+
+document.getElementById("kpiPress").textContent =
+  data.pressure?.toFixed(0) + " hPa";
+
       if (!data) return;
       
 lastUpdateTime = new Date(
@@ -687,6 +763,10 @@ lastUpdateTime = new Date(
 
       const diffSec = (Date.now() - lastSeen) / 1000;
       const isOffline = diffSec > 60;
+      
+document.getElementById("kpiStatus").textContent =
+  isOffline ? "Offline" : "Online";
+
 
       // 🔒 LOCKDOWN toast
       if (data.lockdown === true && lastLockdownState === false) {
@@ -716,6 +796,35 @@ lastUpdateTime = new Date(
 
       setOnlineBadge(isOffline);
       setLockdownBadge(data.lockdown === true);
+    }
+  )
+  .subscribe();
+  // ✅ KPI realtime iš status_log
+db.channel('log-changes')
+  .on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'status_log'
+    },
+    (payload) => {
+
+      const data = payload.new;
+      if (!data) return;
+
+      console.log("KPI LOG:", data);
+
+      document.getElementById("kpiTemp").textContent =
+        (data.temp ?? "--") + "°C";
+
+      document.getElementById("kpiMoist").textContent =
+        (data.moisture ?? "--") + "%";
+
+      document.getElementById("kpiPress").textContent =
+        (data.pressure ?? "--") + " hPa";
+
+      lastUpdateTime = new Date(data.timestamp).getTime();
     }
   )
   .subscribe();
@@ -764,6 +873,32 @@ btnLogout.onclick = async () => {
   // ================== UPDATE TIMER ==================
 
 let lastUpdateTime = null;
+  // ✅ KPI INITIAL LOAD
+async function loadLastKPI(){
+
+  const { data } = await db
+    .from("status_log")
+    .select("*")
+    .eq("id", ESP_ID)
+    .order("timestamp", { ascending: false })
+    .limit(1);
+
+  console.log("INIT KPI:", data);
+
+  if(data && data.length > 0){
+
+    const row = data[0];
+
+    document.getElementById("kpiTemp").textContent =
+      (row.temp ?? "--") + "°C";
+
+    document.getElementById("kpiMoist").textContent =
+      (row.moisture ?? "--") + "%";
+
+    document.getElementById("kpiPress").textContent =
+      (row.pressure ?? "--") + " hPa";
+  }
+}
 
 // pasiimam paskutinį įrašą iš DB
 async function initUpdateTimer() {
@@ -819,10 +954,12 @@ function startCountdown() {
 
 // paleidimas
 initUpdateTimer();
+  loadLastKPI();
 
 </script>
 
 
 </body>
 </html>
+
 
