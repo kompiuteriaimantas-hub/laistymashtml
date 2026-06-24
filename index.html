@@ -319,9 +319,13 @@
           <button id="btnResetData" class="btn-amber">
             ♻️ Reset duomenims
           </button>
-          <a href="grafikas.html">
-  <button class="btn-graph">📊 Grafikas</button>
-</a>
+        <button class="btn-graph" onclick="window.location.href='grafikas.html'">
+  📊 Grafikas
+</button>
+
+<div id="nextUpdate">
+  ⏳ Kitas atnaujinimas: ...
+</div>
 
         </div>
         
@@ -667,6 +671,11 @@ db.channel('status-changes')
 
       const data = payload.new;
       if (!data) return;
+      
+lastUpdateTime = new Date(
+  data.updated_at || data.timestamp || data.created_at
+).getTime();
+
 
       console.log("REALTIME:", data);
 
@@ -751,6 +760,65 @@ btnLogout.onclick = async () => {
 (async function init() {
   await checkSession(); 
 })();
+
+  // ================== UPDATE TIMER ==================
+
+let lastUpdateTime = null;
+
+// pasiimam paskutinį įrašą iš DB
+async function initUpdateTimer() {
+
+  const { data, error } = await db
+    .from("status_log")
+    .select("timestamp")
+    .eq("id", ESP_ID)
+    .order("timestamp", { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) {
+    document.getElementById("nextUpdate").textContent =
+      "❌ Nerasta duomenų";
+    return;
+  }
+
+  // paskutinis update
+  lastUpdateTime = new Date(data[0].timestamp).getTime();
+
+  startCountdown();
+}
+
+// countdown funkcija
+function startCountdown() {
+
+  setInterval(() => {
+
+    if (!lastUpdateTime) return;
+
+    const now = Date.now();
+
+    // sekantis update po 1h
+    const next = lastUpdateTime + (60 * 60 * 1000);
+
+    let diff = next - now;
+
+    if (diff <= 0) {
+      document.getElementById("nextUpdate").textContent =
+        "🔄 Laukiamas naujas įrašas...";
+      return;
+    }
+
+    const h = Math.floor(diff / 1000 / 60 / 60);
+    const m = Math.floor((diff / 1000 / 60) % 60);
+    const s = Math.floor((diff / 1000) % 60);
+
+    document.getElementById("nextUpdate").textContent =
+      `⏳ Kitas atnaujinimas po: ${h}h ${m}m ${s}s`;
+
+  }, 1000);
+}
+
+// paleidimas
+initUpdateTimer();
 
 </script>
 
