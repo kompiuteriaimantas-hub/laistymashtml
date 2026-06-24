@@ -595,7 +595,7 @@ async function checkRealtimeStatus() {
       "📡 Paskutinis signalas: " + formatLastSeen(lastSeen);
 
     const diffSec = (Date.now() - lastSeen) / 1000;
-    const isOffline = diffSec > 60;
+    const isOffline = diffSec > 3700;
 
     setOnlineBadge(isOffline);
 
