@@ -799,6 +799,35 @@ document.getElementById("kpiStatus").textContent =
     }
   )
   .subscribe();
+  // ✅ KPI realtime iš status_log
+db.channel('log-changes')
+  .on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'status_log'
+    },
+    (payload) => {
+
+      const data = payload.new;
+      if (!data) return;
+
+      console.log("KPI LOG:", data);
+
+      document.getElementById("kpiTemp").textContent =
+        (data.temp ?? "--") + "°C";
+
+      document.getElementById("kpiMoist").textContent =
+        (data.moisture ?? "--") + "%";
+
+      document.getElementById("kpiPress").textContent =
+        (data.pressure ?? "--") + " hPa";
+
+      lastUpdateTime = new Date(data.timestamp).getTime();
+    }
+  )
+  .subscribe();
 
 
   // ✅ backup polling (kas 60s – saugumas)
@@ -844,6 +873,32 @@ btnLogout.onclick = async () => {
   // ================== UPDATE TIMER ==================
 
 let lastUpdateTime = null;
+  // ✅ KPI INITIAL LOAD
+async function loadLastKPI(){
+
+  const { data } = await db
+    .from("status_log")
+    .select("*")
+    .eq("id", ESP_ID)
+    .order("timestamp", { ascending: false })
+    .limit(1);
+
+  console.log("INIT KPI:", data);
+
+  if(data && data.length > 0){
+
+    const row = data[0];
+
+    document.getElementById("kpiTemp").textContent =
+      (row.temp ?? "--") + "°C";
+
+    document.getElementById("kpiMoist").textContent =
+      (row.moisture ?? "--") + "%";
+
+    document.getElementById("kpiPress").textContent =
+      (row.pressure ?? "--") + " hPa";
+  }
+}
 
 // pasiimam paskutinį įrašą iš DB
 async function initUpdateTimer() {
@@ -899,6 +954,7 @@ function startCountdown() {
 
 // paleidimas
 initUpdateTimer();
+  loadLastKPI();
 
 </script>
 
