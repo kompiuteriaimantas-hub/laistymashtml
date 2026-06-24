@@ -5,22 +5,22 @@
 <title>Grafikų panelė</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
+<!-- ✅ LIBS -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 :root{
   --bg:#0f172a;
   --card:#111827;
-  --accent:#22c55e;
   --text:#e5e7eb;
-  --muted:#9ca3af;
 }
 
 body{
   margin:0;
+  font-family:sans-serif;
   background:linear-gradient(135deg,#0f172a,#020617);
   color:var(--text);
-  font-family:sans-serif;
 }
 
 .container{
@@ -34,33 +34,25 @@ body{
   border-radius:16px;
   padding:20px;
   margin-bottom:20px;
-  box-shadow:0 20px 40px rgba(0,0,0,0.4);
 }
 
 .title{
   font-size:22px;
-  font-weight:700;
-  margin-bottom:10px;
+  font-weight:bold;
 }
 
-.subtitle{
-  color:var(--muted);
-  font-size:14px;
-}
-
-input[type="date"]{
+input{
+  margin-top:10px;
   padding:10px;
   border-radius:10px;
   border:none;
   background:#1f2937;
   color:white;
-  font-size:14px;
 }
 
 canvas{
   margin-top:15px;
 }
-
 </style>
 </head>
 
@@ -68,35 +60,39 @@ canvas{
 <div class="container">
 
 <div class="card">
-  <div class="title">📊 Augalų grafikai</div>
-  <div class="subtitle">Pasirink dieną</div>
-  <br>
+  <div class="title">📅 Pasirink dieną</div>
   <input type="date" id="datePicker">
 </div>
 
 <div class="card">
-  <canvas id="chart"></canvas>
+  <div class="title">🌡 Temperatūra</div>
+  <canvas id="chartTemp"></canvas>
+</div>
+
+<div class="card">
+  <div class="title">💧 Drėgmė</div>
+  <canvas id="chartMoist"></canvas>
+</div>
+
+<div class="card">
+  <div class="title">📈 Slėgis</div>
+  <canvas id="chartPressure"></canvas>
 </div>
 
 </div>
-
-
-<!-- LIBRARIES -->
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 
+// ====== CONFIG ======
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI"; // <-- įrašyk savo
+const SUPABASE_KEY = "TAVO_ANON_KEY";
 const ESP_ID = "esp1";
 
-// ✅ teisingas init
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const ctx = document.getElementById("chart");
-let chart;
+let chart1, chart2, chart3;
 
+// ===== LOAD DATA =====
 async function loadData(dateStr){
 
   const start = new Date(dateStr);
@@ -123,24 +119,58 @@ async function loadData(dateStr){
   );
 
   const temp = data.map(r => r.temp);
-  const moisture = data.map(r => r.moisture);
-  const pressure = data.map(r => r.pressure);
+  const moist = data.map(r => r.moisture);
+  const press = data.map(r => r.pressure);
 
-  if(chart) chart.destroy();
+  // DESTROY OLD
+  if(chart1) chart1.destroy();
+  if(chart2) chart2.destroy();
+  if(chart3) chart3.destroy();
 
-  chart = new Chart(ctx, {
+  // TEMP
+  chart1 = new Chart(document.getElementById("chartTemp"), {
     type:'line',
     data:{
       labels,
-      datasets:[
-        { label:"Temp", data:temp, borderColor:"#ef4444", tension:0.3 },
-        { label:"Drėgmė", data:moisture, borderColor:"#3b82f6", tension:0.3 },
-        { label:"Slėgis", data:pressure, borderColor:"#22c55e", tension:0.3 }
-      ]
+      datasets:[{
+        label:"°C",
+        data:temp,
+        borderColor:"#ef4444",
+        tension:0.3
+      }]
+    }
+  });
+
+  // MOISTURE
+  chart2 = new Chart(document.getElementById("chartMoist"), {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label:"%",
+        data:moist,
+        borderColor:"#3b82f6",
+        tension:0.3
+      }]
+    }
+  });
+
+  // PRESSURE
+  chart3 = new Chart(document.getElementById("chartPressure"), {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label:"hPa",
+        data:press,
+        borderColor:"#22c55e",
+        tension:0.3
+      }]
     }
   });
 }
 
+// ===== INIT =====
 const datePicker = document.getElementById("datePicker");
 const today = new Date().toISOString().slice(0,10);
 
@@ -150,7 +180,6 @@ datePicker.onchange = () => loadData(datePicker.value);
 loadData(today);
 
 </script>
-
 
 </body>
 </html>
