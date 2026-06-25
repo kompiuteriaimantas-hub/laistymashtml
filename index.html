@@ -350,7 +350,7 @@
           </div>
         </div>
         <div class="card-subtitle">
-          Pasirink dieną, kad matytum valandinius matavimus ir duomenų sunaudojimą.
+         <span id="usageText">0 MB</span>
         </div>
       </div>
 
@@ -608,7 +608,30 @@ async function checkRealtimeStatus() {
     setOnlineBadge(true);
   }
 }
+async function loadUsage() {
+  const { data, error } = await db
+    .from("data_usage_mb")
+    .select("data_used_kb")
+    .eq("id", ESP_ID)
+    .maybeSingle();
 
+  if (error) {
+    console.log("Usage load error:", error);
+    return;
+  }
+
+  const kb = data?.data_used_kb ?? 0;
+  const mb = kb / 1024;
+
+  document.getElementById("usageText").textContent =
+    mb.toFixed(3) + " MB";
+}
+
+
+
+
+
+  
 
 async function loadDayData(dateStr) {
   dayTableBody.innerHTML = `<tr><td colspan="7">Kraunama...</td></tr>`;
@@ -718,6 +741,7 @@ function initAppOnce() {
   const today = new Date();
   datePicker.value = today.toISOString().slice(0,10);
   loadDayData(datePicker.value);
+  loadUsage();
 
   datePicker.onchange = () => loadDayData(datePicker.value);
 
