@@ -621,11 +621,17 @@ async function loadUsage() {
   }
 
   const kb = data?.data_used_kb ?? 0;
-  const mb = kb / 1024;
 
-  document.getElementById("usageText").textContent =
-    mb.toFixed(3) + " MB";
+  let text = "";
+  if (kb < 1024) {
+    text = kb.toFixed(0) + " KB";
+  } else {
+    text = (kb / 1024).toFixed(3) + " MB";
+  }
+
+  document.getElementById("usageText").textContent = text;
 }
+
 
 
 
