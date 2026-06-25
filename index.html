@@ -693,6 +693,22 @@ async function sendCommand(patch) {
   else alert("Komanda išsaugota.");
 }
 
+  async function loadUsage() {
+    const { data, error } = await supabase
+        .from("data_usage_mb")
+        .select("data_used_kb")
+        .eq("id", "esp1")
+        .maybeSingle();
+
+    if (error) {
+        console.error("Usage error:", error);
+        return;
+    }
+
+    const mb = (data?.data_used_kb ?? 0) / 1024;
+    document.getElementById("usage").innerText = mb.toFixed(3) + " MB";
+}
+
 
 function initAppOnce() {
   console.log("INIT STARTED");
