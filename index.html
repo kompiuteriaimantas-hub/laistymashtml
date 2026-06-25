@@ -748,7 +748,7 @@ function initAppOnce() {
   const today = new Date();
   datePicker.value = today.toISOString().slice(0,10);
   loadDayData(datePicker.value);
-  loadUsage();
+ 
 
   datePicker.onchange = () => loadDayData(datePicker.value);
 
@@ -879,6 +879,8 @@ db.channel('log-changes')
 
   // ✅ backup polling (kas 60s – saugumas)
   //setInterval(checkRealtimeStatus, 60000);
+
+  loadUsage();
   }
 
 
