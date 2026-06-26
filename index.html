@@ -699,6 +699,35 @@ function startCountdown() {
   }, 1000);
 }
 
+async function loadLastKPI() {
+  const { data, error } = await db
+    .from("status_log")
+    .select("temp, moisture, pressure")
+    .eq("id", ESP_ID)
+    .order("timestamp", { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) {
+    document.getElementById("kpiTemp").textContent = "–";
+    document.getElementById("kpiMoist").textContent = "–";
+    document.getElementById("kpiPress").textContent = "–";
+    return;
+  }
+
+  const row = data[0];
+
+  document.getElementById("kpiTemp").textContent =
+    row.temp?.toFixed(1) ?? "–";
+
+  document.getElementById("kpiMoist").textContent =
+    row.moisture?.toFixed(1) ?? "–";
+
+  document.getElementById("kpiPress").textContent =
+    row.pressure?.toFixed(0) ?? "–";
+}
+
+
+  
 
 async function checkSession() {
   const { data } = await db.auth.getUser();
