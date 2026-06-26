@@ -535,7 +535,7 @@ async function checkRealtimeStatus() {
 
 async function loadUsage() {
   const { data, error } = await db
-    .from("data_usage_mb")
+    .from("data_usage")   // ← ČIA PATAISYTA
     .select("data_used_kb")
     .eq("id", ESP_ID)
     .maybeSingle();
@@ -557,6 +557,7 @@ async function loadUsage() {
 
   document.getElementById("usageText").textContent = text;
 }
+
 
 async function loadDayData(dateStr) {
   const body = document.getElementById("dayTableBody");
