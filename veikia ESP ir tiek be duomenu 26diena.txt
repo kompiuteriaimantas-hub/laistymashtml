@@ -227,6 +227,38 @@ Serial.println(resp);
 
     Serial.println(http.errorToString(code));
 
+    // ---- PATCH į status lentelę ----
+{
+  HTTPClient http2;
+  WiFiClientSecure client2;
+  client2.setInsecure();
+
+  String url2 = "https://wbueugwhngtgtifuasvm.supabase.co/rest/v1/status?id=eq." + String(ESP_ID);
+  String body2 = "{\"lockdown\":" + String(lockdown ? "true" : "false") + "}";
+
+  Serial.println("----- STATUS PATCH DEBUG -----");
+  Serial.println("URL: " + url2);
+  Serial.println("BODY: " + body2);
+  Serial.println("--------------------------------");
+
+  if (http2.begin(client2, url2)) {
+    http2.addHeader("Content-Type", "application/json");
+    http2.addHeader("apikey", API_KEY);
+    http2.addHeader("Authorization", String("Bearer ") + API_KEY);
+    http2.addHeader("Prefer", "resolution=merge-duplicates");
+
+    int code2 = http2.PATCH(body2);
+    String resp2 = http2.getString();
+
+    Serial.print("[STATUS PATCH] code: ");
+    Serial.println(code2);
+    Serial.println(resp2);
+
+    http2.end();
+  }
+}
+
+
     http.end();
   }
 }
