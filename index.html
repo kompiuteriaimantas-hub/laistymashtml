@@ -656,6 +656,50 @@ function initAppOnce() {
   loadUsage();
 }
 
+  let lastUpdateTime = null;
+
+async function initUpdateTimer() {
+  const { data, error } = await db
+    .from("status_log")
+    .select("timestamp")
+    .eq("id", ESP_ID)
+    .order("timestamp", { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) {
+    document.getElementById("nextUpdate").textContent =
+      "❌ Nerasta duomenų";
+    return;
+  }
+
+  lastUpdateTime = new Date(data[0].timestamp).getTime();
+  startCountdown();
+}
+
+function startCountdown() {
+  setInterval(() => {
+    if (!lastUpdateTime) return;
+
+    const now = Date.now();
+    const next = lastUpdateTime + (60 * 60 * 1000);
+    let diff = next - now;
+
+    if (diff <= 0) {
+      document.getElementById("nextUpdate").textContent =
+        "🔄 Laukiamas naujas įrašas...";
+      return;
+    }
+
+    const h = Math.floor(diff / 1000 / 60 / 60);
+    const m = Math.floor((diff / 1000 / 60) % 60);
+    const s = Math.floor((diff / 1000) % 60);
+
+    document.getElementById("nextUpdate").textContent =
+      `⏳ Kitas atnaujinimas: ${h}h ${m}m ${s}s`;
+  }, 1000);
+}
+
+
 async function checkSession() {
   const { data } = await db.auth.getUser();
   if (data && data.user) {
