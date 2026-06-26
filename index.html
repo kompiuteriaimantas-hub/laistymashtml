@@ -437,38 +437,17 @@ const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 const ESP_ID = "esp1";
 
-const { createClient } = supabase;
+const { createClient } = window.supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const authDiv = document.getElementById("auth");
-const appDiv = document.getElementById("app");
+let appInitialized = false;
+let lastSeenGlobal = null;
+let lastLockdownState = false;
+let lastOfflineState = false;
 
-const authEmail = document.getElementById("authEmail");
-const authPassword = document.getElementById("authPassword");
-const btnLogin = document.getElementById("btnLogin");
-const btnLogout = document.getElementById("btnLogout");
 
-const datePicker = document.getElementById("datePicker");
-const dayTableBody = document.getElementById("dayTableBody");
-const daySummary = document.getElementById("daySummary");
-const badgeOnline = document.getElementById("badge-online");
-const onlineText = document.getElementById("online-text");
-const badgeLockdown = document.getElementById("badge-lockdown");
-const lockdownText = document.getElementById("lockdown-text");
-
-const btnUnblock = document.getElementById("btnUnblock");
-const btnRelayToggle = document.getElementById("btnRelayToggle");
-const btnResetData = document.getElementById("btnResetData");
-
-  
-let wateringActive = false;
-let wateringStart = 0;
-const WATER_DURATION = 10000; // 10s
-
-  
 function showToast(msg, color = "red") {
   const el = document.createElement("div");
-
   el.textContent = msg;
   el.style.position = "fixed";
   el.style.bottom = "20px";
@@ -480,98 +459,47 @@ function showToast(msg, color = "red") {
   el.style.boxShadow = "0 5px 15px rgba(0,0,0,0.2)";
   el.style.zIndex = 9999;
   el.style.fontSize = "14px";
-
   document.body.appendChild(el);
-
-  setTimeout(() => {
-    el.remove();
-  }, 4000);
+  setTimeout(() => el.remove(), 4000);
 }
 
-
-let appInitialized = false;
-
-  let lastSeenGlobal = null;
-
-  
-let lastLockdownState = false;
-let lastOfflineState = false;
-
-  
-function updateWateringBar() {
-  if (!wateringActive) return;
-
-  const now = Date.now();
-  const diff = now - wateringStart;
-
-  const percent = Math.min((diff / WATER_DURATION) * 100, 100);
-  const remaining = Math.max(0, Math.ceil((WATER_DURATION - diff) / 1000));
-
-  document.getElementById("wateringBar").style.width = percent + "%";
-  document.getElementById("wateringText").textContent =
-    remaining > 0 ? `Liko ${remaining}s` : "Baigta";
-
-  if (diff >= WATER_DURATION) {
-    wateringActive = false;
-    setTimeout(() => {
-      document.getElementById("wateringBox").style.display = "none";
-    }, 1500);
-  }
-}
-
-
-
-function updateLastSeenTimer() {
-  if (!lastSeenGlobal) return;
-
-  const text = formatLastSeen(lastSeenGlobal);
-  document.getElementById("lastSeenText").textContent =
-    "📡 Paskutinis signalas: " + text;
-}
-
-setInterval(updateLastSeenTimer, 1000);
-
-  function formatLastSeen(timestamp) {
+function formatLastSeen(timestamp) {
   const diffSec = Math.floor((Date.now() - timestamp) / 1000);
-
-  if (diffSec < 60) {
-    return `prieš ${diffSec}s`;
-  }
-
+  if (diffSec < 60) return `prieš ${diffSec}s`;
   const min = Math.floor(diffSec / 60);
-  if (min < 60) {
-    return `prieš ${min} min`;
-  }
-
+  if (min < 60) return `prieš ${min} min`;
   const hours = Math.floor(min / 60);
   return `prieš ${hours} val`;
 }
 
 function setLockdownBadge(isLockdown) {
+  const badge = document.getElementById("badge-lockdown");
+  const text = document.getElementById("lockdown-text");
   if (isLockdown) {
-    badgeLockdown.classList.remove("badge-lockdown-no");
-    badgeLockdown.classList.add("badge-lockdown-yes");
-    lockdownText.textContent = "Taip";
+    badge.classList.remove("badge-lockdown-no");
+    badge.classList.add("badge-lockdown-yes");
+    text.textContent = "Taip";
   } else {
-    badgeLockdown.classList.remove("badge-lockdown-yes");
-    badgeLockdown.classList.add("badge-lockdown-no");
-    lockdownText.textContent = "Ne";
+    badge.classList.remove("badge-lockdown-yes");
+    badge.classList.add("badge-lockdown-no");
+    text.textContent = "Ne";
   }
 }
 
 function setOnlineBadge(isOffline) {
+  const badge = document.getElementById("badge-online");
+  const text = document.getElementById("online-text");
   if (isOffline) {
-    badgeOnline.classList.remove("badge-online");
-    badgeOnline.classList.add("badge-offline");
-    onlineText.textContent = "Offline";
+    badge.classList.remove("badge-online");
+    badge.classList.add("badge-offline");
+    text.textContent = "Offline";
   } else {
-    badgeOnline.classList.remove("badge-offline");
-    badgeOnline.classList.add("badge-online");
-    onlineText.textContent = "Online";
+    badge.classList.remove("badge-offline");
+    badge.classList.add("badge-online");
+    text.textContent = "Online";
   }
 }
 
-// --- REALTIME OFFLINE DETEKTAVIMAS ---
 async function checkRealtimeStatus() {
   try {
     const { data } = await db
@@ -590,7 +518,6 @@ async function checkRealtimeStatus() {
     ).getTime();
 
     lastSeenGlobal = lastSeen;
-
     document.getElementById("lastSeenText").textContent =
       "📡 Paskutinis signalas: " + formatLastSeen(lastSeen);
 
@@ -598,25 +525,24 @@ async function checkRealtimeStatus() {
     const isOffline = diffSec > 3700;
 
     setOnlineBadge(isOffline);
-
-    if (data.lockdown !== undefined) {
-      setLockdownBadge(data.lockdown === true);
-    }
+    setLockdownBadge(data.lockdown === true);
 
   } catch (e) {
     console.log("Realtime error:", e);
     setOnlineBadge(true);
   }
 }
+
 async function loadUsage() {
   const { data, error } = await db
-    .from("data_usage_mb")
+    .from("data_usage")   // ← ČIA PATAISYTA
     .select("data_used_kb")
     .eq("id", ESP_ID)
     .maybeSingle();
 
   if (error) {
     console.log("Usage load error:", error);
+    document.getElementById("usageText").textContent = "N/A";
     return;
   }
 
@@ -626,35 +552,28 @@ async function loadUsage() {
   if (kb < 1024) {
     text = kb.toFixed(0) + " KB";
   } else {
-    text = (kb / 1024).toFixed(3) + " MB";
+    text = (kb / 1024).toFixed(2) + " MB";
   }
 
   document.getElementById("usageText").textContent = text;
 }
 
 
-
-
-
-
-
-  
-
 async function loadDayData(dateStr) {
-  dayTableBody.innerHTML = `<tr><td colspan="7">Kraunama...</td></tr>`;
-  daySummary.textContent = "Kraunama...";
+  const body = document.getElementById("dayTableBody");
+  const summary = document.getElementById("daySummary");
 
-  // ✅ Teisingas LT → UTC konvertavimas
+  body.innerHTML = `<tr><td colspan="7">Kraunama...</td></tr>`;
+  summary.textContent = "Kraunama...";
+
   const start = new Date(dateStr);
   start.setHours(0, 0, 0, 0);
 
   const end = new Date(dateStr);
   end.setHours(23, 59, 59, 999);
 
- 
-
   const { data, error } = await db
-    .from("status_log") // ✅ TEISINGA: čia turi būti log, ne status
+    .from("status_log")
     .select("*")
     .eq("id", ESP_ID)
     .gte("timestamp", start.toISOString())
@@ -662,56 +581,46 @@ async function loadDayData(dateStr) {
     .order("timestamp", { ascending: true });
 
   if (error) {
-    console.log("LOAD ERROR:", error);
-    dayTableBody.innerHTML = `<tr><td colspan="7">Klaida kraunant duomenis</td></tr>`;
-    daySummary.textContent = "Klaida";
+    body.innerHTML = `<tr><td colspan="7">Klaida kraunant</td></tr>`;
+    summary.textContent = "Klaida";
     return;
   }
 
   if (!data || data.length === 0) {
-    dayTableBody.innerHTML = `<tr><td colspan="7">Nėra duomenų šiai dienai</td></tr>`;
-    daySummary.textContent = "Nėra duomenų";
+    body.innerHTML = `<tr><td colspan="7">Nėra duomenų</td></tr>`;
+    summary.textContent = "Nėra duomenų";
     return;
   }
 
-  dayTableBody.innerHTML = "";
-  let totalMb = 0;
+  body.innerHTML = "";
+  let totalKb = 0;
 
-// --- SUMAVIMAS KB ---
-let totalKb = 0;
+  data.forEach((row) => {
+    const kb = row.data_used_kb ?? 0;
+    totalKb += kb;
 
-data.forEach((row) => {
-  const tr = document.createElement("tr");
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+      <td>${row.temp?.toFixed(1) ?? "–"}</td>
+      <td>${row.moisture?.toFixed(1) ?? "–"}</td>
+      <td>${row.pressure?.toFixed(0) ?? "–"}</td>
+      <td class="text-right">${
+        kb >= 1024 ? (kb / 1024).toFixed(3) + " MB" : kb.toFixed(0) + " KB"
+      }</td>
+      <td><span class="pill ${row.lockdown ? "pill-bad" : "pill-ok"}">${row.lockdown ? "Taip" : "Ne"}</span></td>
+      <td><span class="pill ${row.offline ? "pill-bad" : "pill-ok"}">${row.offline ? "Taip" : "Ne"}</span></td>
+    `;
+    body.appendChild(tr);
+  });
 
-  const kb = row.data_used_kb ?? 0;
+  const summaryText =
+    totalKb >= 1024
+      ? (totalKb / 1024).toFixed(3) + " MB"
+      : totalKb.toFixed(0) + " KB";
 
-  tr.innerHTML = `
-    <td>${new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-    <td>${row.temp?.toFixed(1) ?? "–"}</td>
-    <td>${row.moisture?.toFixed(1) ?? "–"}</td>
-    <td>${row.pressure?.toFixed(0) ?? "–"}</td>
-    <td class="text-right">${
-      kb >= 1024
-        ? (kb / 1024).toFixed(3) + " MB"
-        : kb.toFixed(0) + " KB"
-    }</td>
-    <td><span class="pill ${row.lockdown ? "pill-bad" : "pill-ok"}">${row.lockdown ? "Taip" : "Ne"}</span></td>
-    <td><span class="pill ${row.offline ? "pill-bad" : "pill-ok"}">${row.offline ? "Taip" : "Ne"}</span></td>
-  `;
-
-  totalKb += kb;
-  dayTableBody.appendChild(tr);
-});
-
-// --- DIENOS SANTRAUKA ---
-let summaryText =
-  totalKb >= 1024
-    ? (totalKb / 1024).toFixed(3) + " MB"
-    : totalKb.toFixed(0) + " KB";
-
-daySummary.textContent = `Įrašų: ${data.length}, bendrai ~${summaryText}`;}
-
-
+  summary.textContent = `Įrašų: ${data.length}, bendrai ~${summaryText}`;
+}
 
 async function sendCommand(patch) {
   const { error } = await db
@@ -723,235 +632,33 @@ async function sendCommand(patch) {
   else alert("Komanda išsaugota.");
 }
 
-  async function loadUsage() {
-    const { data, error } = await supabase
-        .from("data_usage_mb")
-        .select("data_used_kb")
-        .eq("id", "esp1")
-        .maybeSingle();
-
-    if (error) {
-        console.error("Usage error:", error);
-        return;
-    }
-
-    const mb = (data?.data_used_kb ?? 0) / 1024;
-    document.getElementById("usage").innerText = mb.toFixed(3) + " MB";
-}
-
-
 function initAppOnce() {
-  console.log("INIT STARTED");
   if (appInitialized) return;
   appInitialized = true;
 
   const today = new Date();
-  datePicker.value = today.toISOString().slice(0,10);
-  loadDayData(datePicker.value);
- 
+  document.getElementById("datePicker").value = today.toISOString().slice(0, 10);
+  loadDayData(today.toISOString().slice(0, 10));
 
-  datePicker.onchange = () => loadDayData(datePicker.value);
+  document.getElementById("datePicker").onchange = () =>
+    loadDayData(document.getElementById("datePicker").value);
 
-  btnUnblock.onclick = () => sendCommand({ unblock: true });
-  
-btnRelayToggle.onclick = () => {
-  sendCommand({ relay_manual: "WATER_10S" });
+  document.getElementById("btnUnblock").onclick = () =>
+    sendCommand({ unblock: true });
 
-  // start UI progress
-  wateringActive = true;
-  wateringStart = Date.now();
+  document.getElementById("btnRelayToggle").onclick = () =>
+    sendCommand({ relay_manual: "WATER_10S" });
 
-  document.getElementById("wateringBox").style.display = "block";
-};
+  document.getElementById("btnResetData").onclick = () =>
+    sendCommand({ reset_data_usage: true });
 
-  btnResetData.onclick = () => sendCommand({ reset_data_usage: true });
-
-  // ✅ pirmas status užkrovimas
   checkRealtimeStatus();
-
-  // ✅ REALTIME (instant update 🔥)
- 
-db.channel('status-changes')
-  .on(
-    'postgres_changes',
-    {
-      event: '*',   // 🔥 svarbu
-      schema: 'public',
-      table: 'status',
-      filter: `id=eq.${ESP_ID}`
-    },
-    (payload) => {
-
-      const data = payload.new;
-      
-document.getElementById("kpiTemp").textContent =
-  data.temp?.toFixed(1) + "°C";
-
-document.getElementById("kpiMoist").textContent =
-  data.moisture?.toFixed(1) + "%";
-
-document.getElementById("kpiPress").textContent =
-  data.pressure?.toFixed(0) + " hPa";
-
-      if (!data) return;
-      
-lastUpdateTime = new Date(
-  data.updated_at || data.timestamp || data.created_at
-).getTime();
-
-
-      console.log("REALTIME:", data);
-
-      const lastSeen = new Date(
-        data.updated_at || data.timestamp || data.created_at
-      ).getTime();
-
-      lastSeenGlobal = lastSeen;
-
-      const diffSec = (Date.now() - lastSeen) / 1000;
-      const isOffline = diffSec > 60;
-      
-document.getElementById("kpiStatus").textContent =
-  isOffline ? "Offline" : "Online";
-
-
-      // 🔒 LOCKDOWN toast
-      if (data.lockdown === true && lastLockdownState === false) {
-        showToast("🔒 LOCKDOWN – patikrink sistemą!", "red");
-      }
-
-      if (data.lockdown === false && lastLockdownState === true) {
-        showToast("✅ LOCKDOWN išjungtas", "green");
-      }
-
-      // 📡 OFFLINE toast
-      if (isOffline && !lastOfflineState) {
-        showToast("⚠️ ESP OFFLINE!", "orange");
-      }
-
-      if (!isOffline && lastOfflineState) {
-        showToast("✅ ESP ONLINE", "green");
-      }
-
-      // update states
-      lastLockdownState = data.lockdown === true;
-      lastOfflineState = isOffline;
-
-      // UI update
-      document.getElementById("lastSeenText").textContent =
-        "📡 Paskutinis signalas: " + formatLastSeen(lastSeen);
-
-      setOnlineBadge(isOffline);
-      setLockdownBadge(data.lockdown === true);
-    }
-  )
-  .subscribe();
-  // ✅ KPI realtime iš status_log
-db.channel('log-changes')
-  .on(
-    'postgres_changes',
-    {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'status_log'
-    },
-    (payload) => {
-
-      const data = payload.new;
-      if (!data) return;
-
-      console.log("KPI LOG:", data);
-
-      document.getElementById("kpiTemp").textContent =
-        (data.temp ?? "--") + "°C";
-
-      document.getElementById("kpiMoist").textContent =
-        (data.moisture ?? "--") + "%";
-
-      document.getElementById("kpiPress").textContent =
-        (data.pressure ?? "--") + " hPa";
-
-      lastUpdateTime = new Date(data.timestamp).getTime();
-    }
-  )
-  .subscribe();
-
-
-  // ✅ backup polling (kas 60s – saugumas)
-  //setInterval(checkRealtimeStatus, 60000);
-
   loadUsage();
-  }
-
-
-async function checkSession() {
-  const { data } = await db.auth.getUser();
-  if (data && data.user) {
-    authDiv.style.display = "none";
-    appDiv.style.display = "block";
-    initAppOnce();
-
-    
-  } else {
-    authDiv.style.display = "block";
-    appDiv.style.display = "none";
-  }
 }
 
-btnLogin.onclick = async () => {
-  const email = authEmail.value.trim();
-  const password = authPassword.value;
+  let lastUpdateTime = null;
 
-  if (!email || !password) return alert("Įvesk el. paštą ir slaptažodį");
-
-  const { error } = await db.auth.signInWithPassword({ email, password });
-  if (error) return alert("Prisijungimo klaida");
-
-  checkSession();
-};
-
-btnLogout.onclick = async () => {
-  await db.auth.signOut();
-  appInitialized = false;
-};
-
-(async function init() {
-  await checkSession(); 
-})();
-
-  // ================== UPDATE TIMER ==================
-
-let lastUpdateTime = null;
-  // ✅ KPI INITIAL LOAD
-async function loadLastKPI(){
-
-  const { data } = await db
-    .from("status_log")
-    .select("*")
-    .eq("id", ESP_ID)
-    .order("timestamp", { ascending: false })
-    .limit(1);
-
-  console.log("INIT KPI:", data);
-
-  if(data && data.length > 0){
-
-    const row = data[0];
-
-    document.getElementById("kpiTemp").textContent =
-      (row.temp ?? "--") + "°C";
-
-    document.getElementById("kpiMoist").textContent =
-      (row.moisture ?? "--") + "%";
-
-    document.getElementById("kpiPress").textContent =
-      (row.pressure ?? "--") + " hPa";
-  }
-}
-
-// pasiimam paskutinį įrašą iš DB
 async function initUpdateTimer() {
-
   const { data, error } = await db
     .from("status_log")
     .select("timestamp")
@@ -965,24 +672,16 @@ async function initUpdateTimer() {
     return;
   }
 
-  // paskutinis update
   lastUpdateTime = new Date(data[0].timestamp).getTime();
-
   startCountdown();
 }
 
-// countdown funkcija
 function startCountdown() {
-
   setInterval(() => {
-
     if (!lastUpdateTime) return;
 
     const now = Date.now();
-
-    // sekantis update po 1h
     const next = lastUpdateTime + (60 * 60 * 1000);
-
     let diff = next - now;
 
     if (diff <= 0) {
@@ -996,19 +695,79 @@ function startCountdown() {
     const s = Math.floor((diff / 1000) % 60);
 
     document.getElementById("nextUpdate").textContent =
-      `⏳ Kitas atnaujinimas po: ${h}h ${m}m ${s}s`;
-
+      `⏳ Kitas atnaujinimas: ${h}h ${m}m ${s}s`;
   }, 1000);
 }
 
-// paleidimas
-initUpdateTimer();
-  loadLastKPI();
+async function loadLastKPI() {
+  const { data, error } = await db
+    .from("status_log")
+    .select("temp, moisture, pressure")
+    .eq("id", ESP_ID)
+    .order("timestamp", { ascending: false })
+    .limit(1);
 
+  if (error || !data || data.length === 0) {
+    document.getElementById("kpiTemp").textContent = "–";
+    document.getElementById("kpiMoist").textContent = "–";
+    document.getElementById("kpiPress").textContent = "–";
+    return;
+  }
+
+  const row = data[0];
+
+  document.getElementById("kpiTemp").textContent =
+    row.temp?.toFixed(1) ?? "–";
+
+  document.getElementById("kpiMoist").textContent =
+    row.moisture?.toFixed(1) ?? "–";
+
+  document.getElementById("kpiPress").textContent =
+    row.pressure?.toFixed(0) ?? "–";
+}
+
+
+  
+
+async function checkSession() {
+  const { data } = await db.auth.getUser();
+  if (data && data.user) {
+    document.getElementById("auth").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    initAppOnce();
+  } else {
+    document.getElementById("auth").style.display = "block";
+    document.getElementById("app").style.display = "none";
+  }
+}
+
+document.getElementById("btnLogin").onclick = async () => {
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+
+  if (!email || !password) return alert("Įvesk el. paštą ir slaptažodį");
+
+  const { error } = await db.auth.signInWithPassword({ email, password });
+  if (error) return alert("Prisijungimo klaida");
+
+  checkSession();
+};
+
+document.getElementById("btnLogout").onclick = async () => {
+  await db.auth.signOut();
+  appInitialized = false;
+};
+
+(async function init() {
+  await checkSession();
+})();
+
+      initUpdateTimer();
+loadLastKPI();
 </script>
+
 
 
 </body>
 </html>
-
 
