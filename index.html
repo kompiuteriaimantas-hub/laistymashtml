@@ -444,7 +444,9 @@ let appInitialized = false;
 let lastSeenGlobal = null;
 let lastLockdownState = false;
 let lastOfflineState = false;
+let lastUpdateTime = null;
 
+/* ------------------ UI HELPERS ------------------ */
 
 function showToast(msg, color = "red") {
   const el = document.createElement("div");
@@ -500,6 +502,8 @@ function setOnlineBadge(isOffline) {
   }
 }
 
+/* ------------------ REALTIME STATUS ------------------ */
+
 async function checkRealtimeStatus() {
   try {
     const { data } = await db
@@ -533,31 +537,26 @@ async function checkRealtimeStatus() {
   }
 }
 
+/* ------------------ USAGE ------------------ */
+
 async function loadUsage() {
   const { data, error } = await db
-    .from("data_usage")   // ← ČIA PATAISYTA
+    .from("data_usage")
     .select("data_used_kb")
     .eq("id", ESP_ID)
     .maybeSingle();
 
   if (error) {
-    console.log("Usage load error:", error);
     document.getElementById("usageText").textContent = "N/A";
     return;
   }
 
   const kb = data?.data_used_kb ?? 0;
-
-  let text = "";
-  if (kb < 1024) {
-    text = kb.toFixed(0) + " KB";
-  } else {
-    text = (kb / 1024).toFixed(2) + " MB";
-  }
-
-  document.getElementById("usageText").textContent = text;
+  document.getElementById("usageText").textContent =
+    kb < 1024 ? kb.toFixed(0) + " KB" : (kb / 1024).toFixed(2) + " MB";
 }
 
+/* ------------------ DAY LOG ------------------ */
 
 async function loadDayData(dateStr) {
   const body = document.getElementById("dayTableBody");
@@ -580,13 +579,7 @@ async function loadDayData(dateStr) {
     .lte("timestamp", end.toISOString())
     .order("timestamp", { ascending: true });
 
-  if (error) {
-    body.innerHTML = `<tr><td colspan="7">Klaida kraunant</td></tr>`;
-    summary.textContent = "Klaida";
-    return;
-  }
-
-  if (!data || data.length === 0) {
+  if (error || !data || data.length === 0) {
     body.innerHTML = `<tr><td colspan="7">Nėra duomenų</td></tr>`;
     summary.textContent = "Nėra duomenų";
     return;
@@ -605,22 +598,18 @@ async function loadDayData(dateStr) {
       <td>${row.temp?.toFixed(1) ?? "–"}</td>
       <td>${row.moisture?.toFixed(1) ?? "–"}</td>
       <td>${row.pressure?.toFixed(0) ?? "–"}</td>
-      <td class="text-right">${
-        kb >= 1024 ? (kb / 1024).toFixed(3) + " MB" : kb.toFixed(0) + " KB"
-      }</td>
+      <td class="text-right">${kb >= 1024 ? (kb / 1024).toFixed(3) + " MB" : kb.toFixed(0) + " KB"}</td>
       <td><span class="pill ${row.lockdown ? "pill-bad" : "pill-ok"}">${row.lockdown ? "Taip" : "Ne"}</span></td>
       <td><span class="pill ${row.offline ? "pill-bad" : "pill-ok"}">${row.offline ? "Taip" : "Ne"}</span></td>
     `;
     body.appendChild(tr);
   });
 
-  const summaryText =
-    totalKb >= 1024
-      ? (totalKb / 1024).toFixed(3) + " MB"
-      : totalKb.toFixed(0) + " KB";
-
-  summary.textContent = `Įrašų: ${data.length}, bendrai ~${summaryText}`;
+  summary.textContent =
+    `Įrašų: ${data.length}, bendrai ~${totalKb >= 1024 ? (totalKb / 1024).toFixed(3) + " MB" : totalKb.toFixed(0) + " KB"}`;
 }
+
+/* ------------------ COMMANDS ------------------ */
 
 async function sendCommand(patch) {
   const { error } = await db
@@ -629,7 +618,92 @@ async function sendCommand(patch) {
     .eq("id", ESP_ID);
 
   if (error) alert("Klaida siunčiant komandą");
-  else alert("Komanda išsaugota.");
+  else {
+    alert("Komanda išsaugota.");
+
+    if (patch.reset_data_usage) {
+      setTimeout(loadUsage, 1500);
+    }
+  }
+}
+
+/* ------------------ KPI ------------------ */
+
+async function loadLastKPI() {
+  const { data, error } = await db
+    .from("status_log")
+    .select("temp, moisture, pressure")
+    .eq("id", ESP_ID)
+    .order("timestamp", { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) {
+    document.getElementById("kpiTemp").textContent = "–";
+    document.getElementById("kpiMoist").textContent = "–";
+    document.getElementById("kpiPress").textContent = "–";
+    return;
+  }
+
+  const row = data[0];
+  document.getElementById("kpiTemp").textContent = row.temp?.toFixed(1) ?? "–";
+  document.getElementById("kpiMoist").textContent = row.moisture?.toFixed(1) ?? "–";
+  document.getElementById("kpiPress").textContent = row.pressure?.toFixed(0) ?? "–";
+}
+
+/* ------------------ UPDATE TIMER ------------------ */
+
+async function initUpdateTimer() {
+  const { data, error } = await db
+    .from("status_log")
+    .select("timestamp")
+    .eq("id", ESP_ID)
+    .order("timestamp", { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) {
+    document.getElementById("nextUpdate").textContent = "❌ Nerasta duomenų";
+    return;
+  }
+
+  lastUpdateTime = new Date(data[0].timestamp).getTime();
+  startCountdown();
+}
+
+function startCountdown() {
+  setInterval(() => {
+    if (!lastUpdateTime) return;
+
+    const now = Date.now();
+    const next = lastUpdateTime + 60 * 60 * 1000;
+    let diff = next - now;
+
+    if (diff <= 0) {
+      document.getElementById("nextUpdate").textContent =
+        "🔄 Laukiamas naujas įrašas...";
+      return;
+    }
+
+    const h = Math.floor(diff / 1000 / 60 / 60);
+    const m = Math.floor((diff / 1000 / 60) % 60);
+    const s = Math.floor((diff / 1000) % 60);
+
+    document.getElementById("nextUpdate").textContent =
+      `⏳ Kitas atnaujinimas: ${h}h ${m}m ${s}s`;
+  }, 1000);
+}
+
+/* ------------------ SESSION ------------------ */
+
+async function checkSession() {
+  const { data } = await db.auth.getUser();
+  if (data && data.user) {
+    document.getElementById("auth").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    initAppOnce();
+  } else {
+    document.getElementById("auth").style.display = "block";
+    document.getElementById("app").style.display = "none";
+  }
 }
 
 function initAppOnce() {
@@ -637,7 +711,9 @@ function initAppOnce() {
   appInitialized = true;
 
   const today = new Date();
-  document.getElementById("datePicker").value = today.toISOString().slice(0, 10);
+  document.getElementById("datePicker").value =
+    today.toISOString().slice(0, 10);
+
   loadDayData(today.toISOString().slice(0, 10));
 
   document.getElementById("datePicker").onchange = () =>
@@ -656,90 +732,7 @@ function initAppOnce() {
   loadUsage();
 }
 
-  let lastUpdateTime = null;
-
-async function initUpdateTimer() {
-  const { data, error } = await db
-    .from("status_log")
-    .select("timestamp")
-    .eq("id", ESP_ID)
-    .order("timestamp", { ascending: false })
-    .limit(1);
-
-  if (error || !data || data.length === 0) {
-    document.getElementById("nextUpdate").textContent =
-      "❌ Nerasta duomenų";
-    return;
-  }
-
-  lastUpdateTime = new Date(data[0].timestamp).getTime();
-  startCountdown();
-}
-
-function startCountdown() {
-  setInterval(() => {
-    if (!lastUpdateTime) return;
-
-    const now = Date.now();
-    const next = lastUpdateTime + (60 * 60 * 1000);
-    let diff = next - now;
-
-    if (diff <= 0) {
-      document.getElementById("nextUpdate").textContent =
-        "🔄 Laukiamas naujas įrašas...";
-      return;
-    }
-
-    const h = Math.floor(diff / 1000 / 60 / 60);
-    const m = Math.floor((diff / 1000 / 60) % 60);
-    const s = Math.floor((diff / 1000) % 60);
-
-    document.getElementById("nextUpdate").textContent =
-      `⏳ Kitas atnaujinimas: ${h}h ${m}m ${s}s`;
-  }, 1000);
-}
-
-async function loadLastKPI() {
-  const { data, error } = await db
-    .from("status_log")
-    .select("temp, moisture, pressure")
-    .eq("id", ESP_ID)
-    .order("timestamp", { ascending: false })
-    .limit(1);
-
-  if (error || !data || data.length === 0) {
-    document.getElementById("kpiTemp").textContent = "–";
-    document.getElementById("kpiMoist").textContent = "–";
-    document.getElementById("kpiPress").textContent = "–";
-    return;
-  }
-
-  const row = data[0];
-
-  document.getElementById("kpiTemp").textContent =
-    row.temp?.toFixed(1) ?? "–";
-
-  document.getElementById("kpiMoist").textContent =
-    row.moisture?.toFixed(1) ?? "–";
-
-  document.getElementById("kpiPress").textContent =
-    row.pressure?.toFixed(0) ?? "–";
-}
-
-
-  
-
-async function checkSession() {
-  const { data } = await db.auth.getUser();
-  if (data && data.user) {
-    document.getElementById("auth").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    initAppOnce();
-  } else {
-    document.getElementById("auth").style.display = "block";
-    document.getElementById("app").style.display = "none";
-  }
-}
+/* ------------------ LOGIN ------------------ */
 
 document.getElementById("btnLogin").onclick = async () => {
   const email = document.getElementById("authEmail").value.trim();
@@ -758,11 +751,13 @@ document.getElementById("btnLogout").onclick = async () => {
   appInitialized = false;
 };
 
+/* ------------------ INIT ------------------ */
+
 (async function init() {
   await checkSession();
 })();
 
-      initUpdateTimer();
+initUpdateTimer();
 loadLastKPI();
 </script>
 
