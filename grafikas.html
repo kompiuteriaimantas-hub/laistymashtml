@@ -2,182 +2,324 @@
 <html lang="lt">
 <head>
 <meta charset="UTF-8">
-<title>Grafikų panelė</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- ✅ LIBS -->
+<title>AI Dashboard PRO</title>
+
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-:root{
-  --bg:#0f172a;
-  --card:#111827;
-  --text:#e5e7eb;
-}
-
 body{
   margin:0;
-  font-family:sans-serif;
+  font-family:system-ui;
   background:linear-gradient(135deg,#0f172a,#020617);
-  color:var(--text);
+  color:#fff;
 }
 
 .container{
-  max-width:1000px;
+  max-width:1100px;
   margin:auto;
   padding:20px;
 }
 
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:14px;
+}
+
 .card{
-  background:var(--card);
-  border-radius:16px;
-  padding:20px;
-  margin-bottom:20px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(10px);
+  border-radius:20px;
+  padding:15px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.3);
 }
 
 .title{
-  font-size:22px;
-  font-weight:bold;
+  font-size:13px;
+  opacity:0.6;
 }
 
-input{
-  margin-top:10px;
-  padding:10px;
-  border-radius:10px;
-  border:none;
-  background:#1f2937;
-  color:white;
+.value{
+  font-size:20px;
+  font-weight:600;
+  margin-top:4px;
 }
 
-canvas{
-  margin-top:15px;
-}
+.green{color:#22c55e;}
+.red{color:#ef4444;}
+.yellow{color:#facc15;}
+
+canvas{margin-top:10px;}
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
+<div class="grid">
+
 <div class="card">
-  <div class="title">📅 Pasirink dieną</div>
-  <input type="date" id="datePicker">
+<div class="title">📡 STATUS</div>
+<div id="status" class="value">–</div>
 </div>
 
 <div class="card">
-  <div class="title">🌡 Temperatūra</div>
-  <canvas id="chartTemp"></canvas>
+<div class="title">🌦 PROGNOZĖ</div>
+<div id="forecast" class="value">–</div>
 </div>
 
 <div class="card">
-  <div class="title">💧 Drėgmė</div>
-  <canvas id="chartMoist"></canvas>
+<div class="title">⚠️ ALERTAI</div>
+<div id="alerts" class="value">–</div>
 </div>
 
 <div class="card">
-  <div class="title">📈 Slėgis</div>
-  <canvas id="chartPressure"></canvas>
+<div class="title">🌱 LAISTYMAS</div>
+<div id="watering" class="value">–</div>
+</div>
+
+<div class="card">
+<div class="title">🔥 STRESS</div>
+<div id="stress" class="value">–</div>
+</div>
+
+</div>
+
+<div class="card">
+<div class="title">🌡 Temperatūra</div>
+<canvas id="chartTemp"></canvas>
+</div>
+
+<div class="card">
+<div class="title">💧 Drėgmė</div>
+<canvas id="chartMoist"></canvas>
+</div>
+
+<div class="card">
+<div class="title">📈 Slėgis</div>
+<canvas id="chartPress"></canvas>
 </div>
 
 </div>
 
 <script>
 
-// ====== CONFIG ======
-const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
+// ✅ tavo config
+const db = supabase.createClient(
+"https://wbueugwhngtgtifuasvm.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI"
+);
+
 const ESP_ID = "esp1";
 
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let c1, c2, c3;
 
-let chart1, chart2, chart3;
-
-// ===== LOAD DATA =====
-async function loadData(dateStr){
-
-  const start = new Date(dateStr);
-  start.setHours(0,0,0,0);
-
-  const end = new Date(dateStr);
-  end.setHours(23,59,59,999);
-
-  const { data } = await db
-    .from("status_log")
-    .select("*")
-    .eq("id", ESP_ID)
-    .gte("timestamp", start.toISOString())
-    .lte("timestamp", end.toISOString())
-    .order("timestamp");
-
-  if(!data || data.length === 0){
-    alert("Nėra duomenų");
-    return;
-  }
-
-  const labels = data.map(r =>
-    new Date(r.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
-  );
-
-  const temp = data.map(r => r.temp);
-  const moist = data.map(r => r.moisture);
-  const press = data.map(r => r.pressure);
-
-  // DESTROY OLD
-  if(chart1) chart1.destroy();
-  if(chart2) chart2.destroy();
-  if(chart3) chart3.destroy();
-
-  // TEMP
-  chart1 = new Chart(document.getElementById("chartTemp"), {
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        label:"°C",
-        data:temp,
-        borderColor:"#ef4444",
-        tension:0.3
-      }]
-    }
-  });
-
-  // MOISTURE
-  chart2 = new Chart(document.getElementById("chartMoist"), {
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        label:"%",
-        data:moist,
-        borderColor:"#3b82f6",
-        tension:0.3
-      }]
-    }
-  });
-
-  // PRESSURE
-  chart3 = new Chart(document.getElementById("chartPressure"), {
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        label:"hPa",
-        data:press,
-        borderColor:"#22c55e",
-        tension:0.3
-      }]
-    }
-  });
+// avg helper
+function avg(arr){
+  return arr.reduce((a,b)=>a+b,0)/arr.length;
 }
 
-// ===== INIT =====
-const datePicker = document.getElementById("datePicker");
-const today = new Date().toISOString().slice(0,10);
+async function load(){
 
-datePicker.value = today;
-datePicker.onchange = () => loadData(datePicker.value);
+try {
 
-loadData(today);
+let { data, error } = await db
+.from("status_log")
+.select("*")
+.eq("id", ESP_ID)
+.order("timestamp", { ascending:false })
+.limit(24);
+
+if(error){
+  console.log(error);
+  return;
+}
+
+if(!data || data.length === 0){
+  document.getElementById("status").textContent="❌ Nėra duomenų";
+  return;
+}
+
+// ✅ FIX – filtruojam blogus įrašus
+data = data.filter(x =>
+  x &&
+  x.timestamp &&
+  !isNaN(parseFloat(x.temp)) &&
+  !isNaN(parseFloat(x.moisture)) &&
+  !isNaN(parseFloat(x.pressure))
+);
+
+if(data.length === 0){
+  document.getElementById("status").textContent="❌ Blogi duomenys";
+  return;
+}
+
+data.reverse();
+
+// ✅ FIX – parseFloat
+let temp = data.map(x => parseFloat(x.temp));
+let moist = data.map(x => parseFloat(x.moisture));
+let press = data.map(x => parseFloat(x.pressure));
+
+// ✅ VIENAS labels (be bug)
+let labels = data.map(x => {
+  const d = new Date(x.timestamp);
+  return isNaN(d) ? "" :
+    d.toLocaleTimeString([], {
+      hour:"2-digit",
+      minute:"2-digit"
+    });
+});
+
+let last = data[data.length-1];
+
+// ===== STATUS =====
+const diff = (Date.now() - new Date(last.timestamp).getTime()) / 1000;
+
+let statusEl = document.getElementById("status");
+
+if(diff < 1800){
+  statusEl.textContent="🟢 ONLINE";
+  statusEl.className="value green";
+}else if(diff < 7200){
+  statusEl.textContent="🟡 DELAY";
+  statusEl.className="value yellow";
+}else{
+  statusEl.textContent="🔴 OFFLINE";
+  statusEl.className="value red";
+}
+
+// ===== AI =====
+let prediction="🌫 Stabilu";
+let rain=0;
+let wind=0;
+
+if(data.length>=5){
+
+ let dp = press[press.length-1] - avg(press.slice(-5));
+ let dh = moist[moist.length-1] - avg(moist.slice(-5));
+
+ if(dp < -4 && dh > 5){
+   prediction="⛈ Lietus";
+   rain=90;
+ }
+ else if(dp < -2){
+   prediction="🌧 Blogėja";
+   rain=60;
+ }
+ else if(dp > 2){
+   prediction="☀️ Gerėja";
+   rain=10;
+ }
+ else{
+   prediction="🌫 Stabilu";
+   rain=20;
+ }
+
+ wind = Math.abs(dp * 2);
+}
+
+document.getElementById("forecast").textContent =
+`${prediction} | 🌧 ${rain}% | 🌬 ${Math.round(wind)} m/s`;
+
+// ===== ALERTai =====
+let alerts = [];
+
+if(rain > 70) alerts.push("🌧 Lietus");
+if(moist[moist.length-1] < 30) alerts.push("💧 Sausa");
+if(temp[temp.length-1] > 30) alerts.push("🔥 Karšta");
+
+document.getElementById("alerts").textContent =
+alerts.length ? alerts.join(" • ") : "✅ OK";
+
+// ===== WATERING =====
+let water="✅ OK";
+
+if(moist[moist.length-1] < 35 && rain < 40){
+  water="💧 Laistyti";
+}
+if(rain > 60){
+  water="❌ Nelaistyti";
+}
+
+document.getElementById("watering").textContent = water;
+
+// ===== STRESS =====
+let stressVal = temp[temp.length-1] + (100 - moist[moist.length-1]);
+
+let sEl = document.getElementById("stress");
+
+if(stressVal > 120){
+  sEl.textContent="🔴 Pavojus";
+  sEl.className="value red";
+}
+else if(stressVal > 90){
+  sEl.textContent="🟡 Vidutinis";
+  sEl.className="value yellow";
+}
+else{
+  sEl.textContent="🟢 OK";
+  sEl.className="value green";
+}
+
+// ===== CHART DESTROY =====
+if(c1) c1.destroy();
+if(c2) c2.destroy();
+if(c3) c3.destroy();
+
+// ===== GRAFIKAI =====
+c1 = new Chart(document.getElementById("chartTemp"), {
+ type:'line',
+ data:{
+  labels,
+  datasets:[{
+    label:"°C",
+    data:temp,
+    borderColor:"#ef4444",
+    tension:0.3
+  }]
+ }
+});
+
+c2 = new Chart(document.getElementById("chartMoist"), {
+ type:'line',
+ data:{
+  labels,
+  datasets:[{
+    label:"%",
+    data:moist,
+    borderColor:"#3b82f6",
+    tension:0.3
+  }]
+ }
+});
+
+c3 = new Chart(document.getElementById("chartPress"), {
+ type:'line',
+ data:{
+  labels,
+  datasets:[{
+    label:"hPa",
+    data:press,
+    borderColor:"#22c55e",
+    tension:0.3
+  }]
+ }
+});
+
+} catch(e){
+console.log("ERROR:", e);
+}
+
+}
+
+// init
+load();
+setInterval(load, 60000);
 
 </script>
 
