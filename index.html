@@ -502,36 +502,40 @@ function setOnlineBadge(isOffline) {
 
 async function checkRealtimeStatus() {
   try {
-    const { data } = await db
-      .from("status")
-      .select("*")
-      .eq("id", ESP_ID)
-      .maybeSingle();
+    
+const { data } = await db
+  .from("status_log")
+  .select("timestamp, lockdown")
+  .eq("id", ESP_ID)
+  .order("timestamp", { ascending: false })
+  .limit(1);
+
 
     if (!data) {
       setOnlineBadge(true);
       return;
     }
 
-    const lastSeen = new Date(
-      data.updated_at || data.timestamp || data.created_at
-    ).getTime();
-
-    lastSeenGlobal = lastSeen;
-    document.getElementById("lastSeenText").textContent =
-      "📡 Paskutinis signalas: " + formatLastSeen(lastSeen);
-
-    const diffSec = (Date.now() - lastSeen) / 1000;
-    const isOffline = diffSec > 3700;
-
-    setOnlineBadge(isOffline);
-    setLockdownBadge(data.lockdown === true);
-
-  } catch (e) {
-    console.log("Realtime error:", e);
-    setOnlineBadge(true);
-  }
+  if (!data || data.length === 0) {
+  setOnlineBadge(true);
+  return;
 }
+
+const row = data[0];
+
+const lastSeen = new Date(row.timestamp).getTime();
+
+lastSeenGlobal = lastSeen;
+
+document.getElementById("lastSeenText").textContent =
+  "📡 Paskutinis signalas: " + formatLastSeen(lastSeen);
+
+const diffSec = (Date.now() - lastSeen) / 1000;
+
+const isOffline = diffSec > 3700; // gali keisti į 7200 jei reikia
+
+setOnlineBadge(isOffline);
+setLockdownBadge(row.lockdown === true);
 
 async function loadUsage() {
   const { data, error } = await db
