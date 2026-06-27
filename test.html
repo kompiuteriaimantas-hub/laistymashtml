@@ -143,12 +143,20 @@ if(!data || data.length === 0){
   return;
 }
 
+
+// ✅ paliekam tik valid įrašus
+data = data.filter(x =>
+  x.temp !== null &&
+  x.moisture !== null &&
+  x.pressure !== null
+);
+
 data.reverse();
 
-// ✅ tiesioginiai laukai – nes pas tave tokie
 let temp = data.map(x => x.temp);
 let moist = data.map(x => x.moisture);
 let press = data.map(x => x.pressure);
+
 
 let last = data[data.length-1];
 
@@ -158,7 +166,7 @@ const diff = (Date.now() - lastTime) / 1000;
 
 let statusEl = document.getElementById("status");
 
-if(diff < 600){
+if(diff < 7200){
   statusEl.textContent="🟢 ONLINE";
   statusEl.className="value green";
 }else{
