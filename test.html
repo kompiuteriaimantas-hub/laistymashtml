@@ -144,21 +144,28 @@ if(!data || data.length === 0){
 }
 
 
-// ✅ paliekam tik valid įrašus
 data = data.filter(x =>
-  x.temp !== null &&
-  x.moisture !== null &&
-  x.pressure !== null
+  x &&
+  x.timestamp &&
+  !isNaN(Number(x.temp)) &&
+  !isNaN(Number(x.moisture)) &&
+  !isNaN(Number(x.pressure))
 );
 
 data.reverse();
 
-let temp = data.map(x => x.temp);
-let moist = data.map(x => x.moisture);
-let press = data.map(x => x.pressure);
+let temp = data.map(x => Number(x.temp));
+let moist = data.map(x => Number(x.moisture));
+let press = data.map(x => Number(x.pressure));
 
+let labels = data.map(x => {
+  const d = new Date(x.timestamp);
+  return isNaN(d) ? "" :
+    d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+});
 
-let last = data[data.length-1];
+let last = data[data.length - 1];
+if (!last) return;
 
 // ===== STATUS =====
 const lastTime = new Date(last.timestamp).getTime();
