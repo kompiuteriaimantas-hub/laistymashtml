@@ -2,274 +2,263 @@
 <html lang="lt">
 <head>
 <meta charset="UTF-8">
-<title>Grafikų panelė PRO</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Dashboard PRO</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{
+body {
   margin:0;
   font-family:sans-serif;
   background:#0f172a;
   color:white;
+  transition:0.5s;
 }
 
-.container{
+.container {
   max-width:1000px;
   margin:auto;
   padding:20px;
 }
 
-.card{
+.card {
   background:#111827;
   border-radius:16px;
   padding:20px;
-  margin-bottom:20px;
+  margin-bottom:15px;
 }
 
-.title{
-  font-size:20px;
+.title {
+  font-size:18px;
   font-weight:bold;
 }
 
-input{
-  margin-top:10px;
+.badge {
+  margin-top:8px;
   padding:10px;
   border-radius:10px;
+  background:#1f2937;
+}
+
+input {
+  padding:8px;
+  border-radius:8px;
   border:none;
   background:#1f2937;
   color:white;
 }
 
-.badge{
-  margin-top:10px;
-  padding:10px;
-  border-radius:10px;
-  font-size:18px;
-  background:#1f2937;
-}
-
-canvas{
-  margin-top:15px;
-}
+canvas { margin-top:12px; }
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
 <div class="card">
-  <div class="title">📅 Data</div>
-  <input type="date" id="datePicker">
+<div class="title">📡 STATUS</div>
+<div id="liveStatus" class="badge">–</div>
 </div>
 
 <div class="card">
-  <div class="title">🌦 AI orų prognozė</div>
-  <div id="weatherPrediction" class="badge">–</div>
-  <div id="extraStats"></div>
+<div class="title">📅 Data</div>
+<input type="date" id="datePicker">
 </div>
 
 <div class="card">
-  <div class="title">🌡 Temperatūra</div>
-  <canvas id="chartTemp"></canvas>
+<div class="title">🌦 AI Prognozė</div>
+<div id="forecast" class="badge">–</div>
+<div id="tomorrow"></div>
 </div>
 
 <div class="card">
-  <div class="title">💧 Drėgmė</div>
-  <canvas id="chartMoist"></canvas>
+<div class="title">⚠️ Alertai</div>
+<div id="alerts"></div>
 </div>
 
 <div class="card">
-  <div class="title">📈 Slėgis</div>
-  <canvas id="chartPressure"></canvas>
+<div class="title">🌱 Laistymo rekomendacija</div>
+<div id="watering"></div>
+</div>
+
+<div class="card">
+<div class="title">📊 24h statistika</div>
+<div id="stats"></div>
+</div>
+
+<div class="card">
+<div class="title">🔥 Stress indeksas</div>
+<div id="stress"></div>
+</div>
+
+<div class="card">
+<div class="title">📈 Slėgis</div>
+<canvas id="chartPressure"></canvas>
 </div>
 
 </div>
 
 <script>
 
-// ===== CONFIG =====
-const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
-const ESP_ID = "esp1";
+const db = supabase.createClient(
+"https://wbueugwhngtgtifuasvm.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI"
+);
 
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const ESP_ID="esp1";
 
-let chart1, chart2, chart3;
+function avg(a){return a.reduce((x,y)=>x+y,0)/a.length;}
 
+// ===== MAIN =====
+async function loadData(date){
 
-// ===== LOAD DATA =====
-async function loadData(dateStr){
+let data;
 
-  let data;
+// ==== load by date ====
+if(date){
+ const start=new Date(date+"T00:00:00Z");
+ const end=new Date(date+"T23:59:59Z");
 
-  // jei pasirinkta data → bandom filtruoti
-  if(dateStr){
-    const start = new Date(dateStr + "T00:00:00Z");
-    const end = new Date(dateStr + "T23:59:59Z");
+ let r=await db.from("status_log")
+ .select("*")
+ .eq("id",ESP_ID)
+ .gte("timestamp",start.toISOString())
+ .lte("timestamp",end.toISOString())
+ .order("timestamp");
 
-    const res = await db
-      .from("status_log")
-      .select("*")
-      .eq("id", ESP_ID)
-      .gte("timestamp", start.toISOString())
-      .lte("timestamp", end.toISOString())
-      .order("timestamp");
+ data=r.data;
+}
 
-    data = res.data;
-  }
+// fallback 24h
+if(!data||data.length==0){
+ let r=await db.from("status_log")
+ .select("*")
+ .eq("id",ESP_ID)
+ .order("timestamp",{ascending:false})
+ .limit(24);
 
-  // fallback jei nėra → paskutinės 24h
-  if(!data || data.length === 0){
-    const res = await db
-      .from("status_log")
-      .select("*")
-      .eq("id", ESP_ID)
-      .order("timestamp", { ascending:false })
-      .limit(24);
+ data=r.data;
+ if(data) data.reverse();
+}
 
-    data = res.data;
-    if(data) data.reverse();
-  }
+if(!data||data.length==0){
+ document.getElementById("forecast").textContent="❌ Nėra duomenų";
+ return;
+}
 
-  if(!data || data.length === 0){
-    document.getElementById("weatherPrediction").textContent = "❌ Nėra duomenų";
-    return;
-  }
+// ===== LIVE =====
+let last = data[data.length-1];
+let diff=(Date.now()-new Date(last.timestamp))/1000;
 
-  // ===== PARSING =====
-  const labels = data.map(r =>
-    new Date(r.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
-  );
+document.getElementById("liveStatus").textContent =
+ diff<600?"🟢 LIVE":"🔴 OFFLINE";
 
-  const temp = data.map(r => r.temp);
-  const moist = data.map(r => r.moisture);
-  const press = data.map(r => r.pressure);
+// ===== ARRAYS =====
+let temp=data.map(x=>x.temp);
+let moist=data.map(x=>x.moisture);
+let press=data.map(x=>x.pressure);
 
-  function avg(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+// ===== AI =====
+let prediction="🌫 Stabilu";
+let rain=0, wind=0;
 
-  let prediction = "🌫 Stabilu";
-  let rainChance = 0;
-  let wind = 0;
+if(data.length>=5){
+ let pNow=last.pressure;
+ let pPrev=avg(data.slice(-5).map(x=>x.pressure));
+ let dp=pNow-pPrev;
 
-  if (data.length >= 5){
+ let hNow=last.moisture;
+ let hPrev=avg(data.slice(-5).map(x=>x.moisture));
+ let dh=hNow-hPrev;
 
-    const last = data[data.length - 1];
-    const prev = data.slice(-5);
+ if(dp<-4 && dh>5){
+   prediction="⛈ Lietus";
+   rain=90;
+   wind=dp*-2;
+ }else if(dp<-2){
+   prediction="🌧 Blogėja";
+   rain=60;
+   wind=dp*-2;
+ }else if(dp>2){
+   prediction="☀️ Gerėja";
+   rain=10;
+ }else{
+   prediction="🌫 Stabilu";
+   rain=20;
+ }
 
-    const dp = last.pressure - avg(prev.map(x=>x.pressure));
-    const dh = last.moisture - avg(prev.map(x=>x.moisture));
-    const dt = last.temp - avg(prev.map(x=>x.temp));
+ wind=Math.round(Math.abs(wind));
+}
 
-    // ===== AI logic =====
-    if (dp < -4 && dh > 5){
-      prediction = "⛈ Artėja lietus";
-      rainChance = 80 + Math.abs(dp)*3;
-      wind = Math.abs(dp)*2;
-    }
-    else if (dp < -2){
-      prediction = "🌧 Blogėja oras";
-      rainChance = 50 + Math.abs(dp)*5;
-      wind = Math.abs(dp)*2;
-    }
-    else if (dp > 2){
-      prediction = "☀️ Gerėja oras";
-      rainChance = 10;
-      wind = Math.abs(dp);
-    }
-    else{
-      prediction = "🌫 Stabilu";
-      rainChance = 20;
-      wind = 2;
-    }
+document.getElementById("forecast").textContent =
+`${prediction} | 🌧 ${rain}% | 🌬 ${wind}m/s`;
 
-    rainChance = Math.min(Math.round(rainChance),100);
-    wind = Math.round(wind);
-  }
+// ===== TOMORROW =====
+document.getElementById("tomorrow").textContent =
+ prediction.includes("🌧")?"🔮 Rytoj: lietus tikėtinas":"🔮 Rytoj: stabilu";
 
-  // UI
-  document.getElementById("weatherPrediction").textContent =
-    `${prediction} | 🌧 ${rainChance}% | 🌬 ${wind} m/s`;
+// ===== ALERTS =====
+let alerts=[];
 
-  document.getElementById("extraStats").textContent =
-    `Slėgis: ${press[press.length-1].toFixed(0)} hPa | Min: ${Math.min(...press)} | Max: ${Math.max(...press)}`;
+if(rain>70) alerts.push("🌧 Artėja lietus");
+if(last.moisture<30) alerts.push("💧 Per sausa");
+if(last.temp>30) alerts.push("🔥 Karšta");
 
+document.getElementById("alerts").innerHTML =
+ alerts.length?alerts.join("<br>"):"✅ Viskas OK";
 
-  // DESTROY old
-  if(chart1) chart1.destroy();
-  if(chart2) chart2.destroy();
-  if(chart3) chart3.destroy();
+// ===== WATERING =====
+let water="✅ OK";
+if(last.moisture<35 && rain<40) water="💧 Laistyti";
+if(rain>60) water="❌ Nelaistyti (lietus)";
 
-  // TEMP
-  chart1 = new Chart(document.getElementById("chartTemp"), {
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        label:"°C",
-        data:temp,
-        borderColor:"#ef4444",
-        tension:0.3,
-        pointRadius:(c)=>c.dataIndex===temp.length-1?6:2
-      }]
-    }
-  });
+document.getElementById("watering").textContent=water;
 
-  // MOIST
-  chart2 = new Chart(document.getElementById("chartMoist"), {
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        label:"%",
-        data:moist,
-        borderColor:"#3b82f6",
-        tension:0.3,
-        pointRadius:(c)=>c.dataIndex===moist.length-1?6:2
-      }]
-    }
-  });
+// ===== STATS =====
+document.getElementById("stats").textContent =
+`Temp max:${Math.max(...temp).toFixed(1)} | min:${Math.min(...temp).toFixed(1)}`;
 
-  // PRESSURE
-  const lastP = press[press.length-1];
-  const color = lastP < 1000 ? "#ef4444" : "#22c55e";
+// ===== STRESS =====
+let stressVal=last.temp+(100-last.moisture);
 
-  chart3 = new Chart(document.getElementById("chartPressure"), {
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        label:"hPa",
-        data:press,
-        borderColor:color,
-        tension:0.3,
-        pointRadius:(c)=>c.dataIndex===press.length-1?6:2
-      }]
-    }
-  });
+let stressTxt =
+ stressVal>120?"🔴 Pavojus":
+ stressVal>90?"🟡 Vidutinis":"🟢 OK";
+
+document.getElementById("stress").textContent=stressTxt;
+
+// ===== BACKGROUND =====
+if(prediction.includes("☀️")) document.body.style.background="#1e293b";
+else if(prediction.includes("🌧")) document.body.style.background="#020617";
+else if(prediction.includes("⛈")) document.body.style.background="#3b0000";
+
+// ===== GRAPH =====
+new Chart(document.getElementById("chartPressure"),{
+ type:'line',
+ data:{
+  labels:data.map(x=>new Date(x.timestamp).toLocaleTimeString()),
+  datasets:[{
+    data:press,
+    borderColor:"#22c55e",
+    tension:0.3
+  }]
+ }
+});
 
 }
 
+// init
+let d=document.getElementById("datePicker");
+let today=new Date().toISOString().slice(0,10);
 
-// ===== INIT =====
-const datePicker = document.getElementById("datePicker");
-const today = new Date().toISOString().slice(0,10);
+d.value=today;
+d.onchange=()=>loadData(d.value);
 
-datePicker.value = today;
-
-datePicker.onchange = () => loadData(datePicker.value);
-
-// pirmas load
 loadData(today);
-
-// auto refresh (tik kai rodom šiandieną)
-setInterval(()=>{
-  if(datePicker.value === today){
-    loadData(today);
-  }
-},60000);
+setInterval(()=>loadData(d.value),60000);
 
 </script>
 
