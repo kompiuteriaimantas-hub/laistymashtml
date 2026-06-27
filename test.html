@@ -1,115 +1,42 @@
 <!DOCTYPE html>
-<html lang="lt">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>AI Dashboard PRO</title>
+<title>TEST AI DASHBOARD</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
-  margin:0;
-  font-family:system-ui;
-  background:linear-gradient(135deg,#0f172a,#020617);
-  color:#fff;
-}
-
-.container{
-  max-width:1100px;
-  margin:auto;
+  background:#0f172a;
+  color:white;
+  font-family:sans-serif;
   padding:20px;
 }
-
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:14px;
-}
-
-/* iOS glass style */
 .card{
-  background:rgba(255,255,255,0.05);
-  backdrop-filter:blur(10px);
-  border-radius:20px;
+  background:#111827;
   padding:15px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.3);
+  border-radius:12px;
+  margin-bottom:10px;
 }
-
-.title{
-  font-size:13px;
-  opacity:0.6;
-}
-
-.value{
-  font-size:20px;
-  font-weight:600;
-  margin-top:4px;
-}
-
-.green{color:#22c55e;}
-.red{color:#ef4444;}
-.yellow{color:#facc15;}
-
-canvas{margin-top:10px;}
 </style>
 </head>
 
 <body>
 
-<div class="container">
-
-<div class="grid">
-
 <div class="card">
-<div class="title">📡 STATUS</div>
-<div id="status" class="value">–</div>
+<div id="status">STATUS...</div>
 </div>
 
 <div class="card">
-<div class="title">🌦 PROGNOZĖ</div>
-<div id="forecast" class="value">–</div>
+<div id="debug">DEBUG...</div>
 </div>
 
-<div class="card">
-<div class="title">⚠️ ALERTAI</div>
-<div id="alerts" class="value">–</div>
-</div>
-
-<div class="card">
-<div class="title">🌱 LAISTYMAS</div>
-<div id="watering" class="value">–</div>
-</div>
-
-<div class="card">
-<div class="title">🔥 STRESS</div>
-<div id="stress" class="value">–</div>
-</div>
-
-</div>
-
-<div class="card">
-<div class="title">🌡 Temperatūra</div>
-<canvas id="chartTemp"></canvas>
-</div>
-
-<div class="card">
-<div class="title">💧 Drėgmė</div>
-<canvas id="chartMoist"></canvas>
-</div>
-
-<div class="card">
-<div class="title">📈 Slėgis</div>
-<canvas id="chartPress"></canvas>
-</div>
-
-</div>
+<canvas id="chart"></canvas>
 
 <script>
 
-// ===== CONFIG =====
 const db = supabase.createClient(
 "https://wbueugwhngtgtifuasvm.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI"
@@ -117,104 +44,54 @@ const db = supabase.createClient(
 
 const ESP_ID = "esp1";
 
-let c1,c2,c3;
-
-// universal field getter (fix undefined 🔥)
-function getVal(x, keys){
-  for(let k of keys){
-    if(x[k] !== undefined && x[k] !== null) return x[k];
-  }
-  return 0;
-}
-
-// avg helper
-function avg(arr){
-  return arr.reduce((a,b)=>a+b,0)/arr.length;
-}
-
-// ===== MAIN =====
 async function load(){
 
-let {data} = await db
+try {
+
+let { data, error } = await db
 .from("status_log")
 .select("*")
-.eq("id",ESP_ID)
-.order("timestamp",{ascending:false})
-.limit(24);
+.eq("id", ESP_ID)
+.order("timestamp", { ascending:false })
+.limit(10);
 
-if(!data || data.length===0) return;
+console.log("DATA:", data);
+console.log("ERROR:", error);
 
-data.reverse();
+// ✅ DEBUG UI
+document.getElementById("debug").textContent =
+JSON.stringify(data?.[0] || "NO DATA", null, 2);
 
-// ✅ universal map (fix visam laikui)
-let temp = data.map(x => getVal(x, ["temp","temperature"]));
-let moist = data.map(x => getVal(x, ["moisture","humidity"]));
-let press = data.map(x => getVal(x, ["pressure","press"]));
-
-let last = data[data.length-1];
-
-// ===== STATUS FIX =====
-let lastTime = new Date(last.timestamp).getTime();
-let diff = (Date.now() - lastTime) / 1000;
-
-let st = document.getElementById("status");
-
-if(diff < 600){
-  st.textContent = "🟢 ONLINE";
-  st.className="value green";
-}else{
-  st.textContent = "🔴 OFFLINE";
-  st.className="value red";
+// ❌ jei nėra
+if(!data || data.length===0){
+  document.getElementById("status").textContent="❌ Nėra duomenų";
+  return;
 }
 
-// ===== AI =====
-let prediction="🌫 Stabilu";
-let rain=0, wind=0;
+// ✅ test fields
+let temp = data.map(x => x.temp ?? x.temperature ?? 0);
 
-if(data.length>=5){
+document.getElementById("status").textContent =
+"✅ OK, gauta: " + data.length + " įrašų";
 
- const dp = press[press.length-1] - avg(press.slice(-5));
- const dh = moist[moist.length-1] - avg(moist.slice(-5));
+// ✅ chart
+new Chart(chart,{
+ type:'line',
+ data:{
+  labels:data.map(x=>x.id),
+  datasets:[{data:temp, borderColor:"red"}]
+ }
+});
 
- if(dp<-4 && dh>5){
-   prediction="⛈ Lietus";
-   rain=90;
- }
- else if(dp<-2){
-   prediction="🌧 Blogėja";
-   rain=60;
- }
- else if(dp>2){
-   prediction="☀️ Gerėja";
-   rain=10;
- }
- else{
-   prediction="🌫 Stabilu";
-   rain=20;
- }
-
- wind = Math.abs(dp * 2);
+} catch(e){
+console.log(e);
+document.getElementById("status").textContent = "💥 JS ERROR";
 }
 
-document.getElementById("forecast").textContent =
-`${prediction} | 🌧 ${rain}% | 🌬 ${Math.round(wind)} m/s`;
+}
 
-// ===== ALERTS =====
-let alerts = [];
+load();
 
-if(rain>70) alerts.push("🌧 Lietus");
-if(moist[moist.length-1] < 30) alerts.push("💧 Sausa");
-if(temp[temp.length-1] > 30) alerts.push("🔥 Karšta");
-
-document.getElementById("alerts").textContent =
-alerts.length ? alerts.join(" • ") : "✅ OK";
-
-// ===== WATERING =====
-let w = "✅ OK";
-
-if(moist[moist.length-1] < 35 && rain < 40) w="💧 Laistyti";
-if(rain > 60) w="❌ Nelaistyti";
-
-document.getElementById("watering").textContent = w;
-
-// ===== STRESS =====
+</script>
+</body>
+</html>
