@@ -108,7 +108,7 @@ canvas{margin-top:10px;}
 
 <script>
 
-// ✅ Įdėk savo tikrą API KEY
+// ✅ tavo config
 const db = supabase.createClient(
 "https://wbueugwhngtgtifuasvm.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI"
@@ -118,6 +118,7 @@ const ESP_ID = "esp1";
 
 let c1, c2, c3;
 
+// avg helper
 function avg(arr){
   return arr.reduce((a,b)=>a+b,0)/arr.length;
 }
@@ -143,39 +144,50 @@ if(!data || data.length === 0){
   return;
 }
 
-
+// ✅ FIX – filtruojam blogus įrašus
 data = data.filter(x =>
   x &&
   x.timestamp &&
-  !isNaN(Number(x.temp)) &&
-  !isNaN(Number(x.moisture)) &&
-  !isNaN(Number(x.pressure))
+  !isNaN(parseFloat(x.temp)) &&
+  !isNaN(parseFloat(x.moisture)) &&
+  !isNaN(parseFloat(x.pressure))
 );
+
+if(data.length === 0){
+  document.getElementById("status").textContent="❌ Blogi duomenys";
+  return;
+}
 
 data.reverse();
 
-let temp = data.map(x => Number(x.temp));
-let moist = data.map(x => Number(x.moisture));
-let press = data.map(x => Number(x.pressure));
+// ✅ FIX – parseFloat
+let temp = data.map(x => parseFloat(x.temp));
+let moist = data.map(x => parseFloat(x.moisture));
+let press = data.map(x => parseFloat(x.pressure));
 
+// ✅ VIENAS labels (be bug)
 let labels = data.map(x => {
   const d = new Date(x.timestamp);
   return isNaN(d) ? "" :
-    d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    d.toLocaleTimeString([], {
+      hour:"2-digit",
+      minute:"2-digit"
+    });
 });
 
-let last = data[data.length - 1];
-if (!last) return;
+let last = data[data.length-1];
 
 // ===== STATUS =====
-const lastTime = new Date(last.timestamp).getTime();
-const diff = (Date.now() - lastTime) / 1000;
+const diff = (Date.now() - new Date(last.timestamp).getTime()) / 1000;
 
 let statusEl = document.getElementById("status");
 
-if(diff < 7200){
+if(diff < 1800){
   statusEl.textContent="🟢 ONLINE";
   statusEl.className="value green";
+}else if(diff < 7200){
+  statusEl.textContent="🟡 DELAY";
+  statusEl.className="value yellow";
 }else{
   statusEl.textContent="🔴 OFFLINE";
   statusEl.className="value red";
@@ -214,10 +226,10 @@ if(data.length>=5){
 document.getElementById("forecast").textContent =
 `${prediction} | 🌧 ${rain}% | 🌬 ${Math.round(wind)} m/s`;
 
-// ===== ALERT =====
-let alerts=[];
+// ===== ALERTai =====
+let alerts = [];
 
-if(rain>70) alerts.push("🌧 Lietus");
+if(rain > 70) alerts.push("🌧 Lietus");
 if(moist[moist.length-1] < 30) alerts.push("💧 Sausa");
 if(temp[temp.length-1] > 30) alerts.push("🔥 Karšta");
 
@@ -254,23 +266,18 @@ else{
   sEl.className="value green";
 }
 
-// ===== GRAFIKAI =====
+// ===== CHART DESTROY =====
 if(c1) c1.destroy();
 if(c2) c2.destroy();
 if(c3) c3.destroy();
 
-let labels = data.map(x =>
-  new Date(x.timestamp).toLocaleTimeString([], {
-    hour:"2-digit",
-    minute:"2-digit"
-  })
-);
-
+// ===== GRAFIKAI =====
 c1 = new Chart(document.getElementById("chartTemp"), {
  type:'line',
  data:{
   labels,
   datasets:[{
+    label:"°C",
     data:temp,
     borderColor:"#ef4444",
     tension:0.3
@@ -283,6 +290,7 @@ c2 = new Chart(document.getElementById("chartMoist"), {
  data:{
   labels,
   datasets:[{
+    label:"%",
     data:moist,
     borderColor:"#3b82f6",
     tension:0.3
@@ -295,6 +303,7 @@ c3 = new Chart(document.getElementById("chartPress"), {
  data:{
   labels,
   datasets:[{
+    label:"hPa",
     data:press,
     borderColor:"#22c55e",
     tension:0.3
@@ -303,15 +312,16 @@ c3 = new Chart(document.getElementById("chartPress"), {
 });
 
 } catch(e){
-console.log(e);
+console.log("ERROR:", e);
 }
 
 }
 
-// INIT
+// init
 load();
 setInterval(load, 60000);
 
 </script>
+
 </body>
 </html>
