@@ -1,48 +1,126 @@
 <!DOCTYPE html>
-<html>
+<html lang="lt">
 <head>
 <meta charset="UTF-8">
-<title>TEST AI DASHBOARD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>AI Dashboard PRO</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
-  background:#0f172a;
-  color:white;
-  font-family:sans-serif;
+  margin:0;
+  font-family:system-ui;
+  background:linear-gradient(135deg,#0f172a,#020617);
+  color:#fff;
+}
+
+.container{
+  max-width:1100px;
+  margin:auto;
   padding:20px;
 }
-.card{
-  background:#111827;
-  padding:15px;
-  border-radius:12px;
-  margin-bottom:10px;
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:14px;
 }
+
+.card{
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(10px);
+  border-radius:20px;
+  padding:15px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.3);
+}
+
+.title{
+  font-size:13px;
+  opacity:0.6;
+}
+
+.value{
+  font-size:20px;
+  font-weight:600;
+  margin-top:4px;
+}
+
+.green{color:#22c55e;}
+.red{color:#ef4444;}
+.yellow{color:#facc15;}
+
+canvas{margin-top:10px;}
 </style>
 </head>
 
 <body>
 
+<div class="container">
+
+<div class="grid">
+
 <div class="card">
-<div id="status">STATUS...</div>
+<div class="title">📡 STATUS</div>
+<div id="status" class="value">–</div>
 </div>
 
 <div class="card">
-<div id="debug">DEBUG...</div>
+<div class="title">🌦 PROGNOZĖ</div>
+<div id="forecast" class="value">–</div>
 </div>
 
-<canvas id="chart"></canvas>
+<div class="card">
+<div class="title">⚠️ ALERTAI</div>
+<div id="alerts" class="value">–</div>
+</div>
+
+<div class="card">
+<div class="title">🌱 LAISTYMAS</div>
+<div id="watering" class="value">–</div>
+</div>
+
+<div class="card">
+<div class="title">🔥 STRESS</div>
+<div id="stress" class="value">–</div>
+</div>
+
+</div>
+
+<div class="card">
+<div class="title">🌡 Temperatūra</div>
+<canvas id="chartTemp"></canvas>
+</div>
+
+<div class="card">
+<div class="title">💧 Drėgmė</div>
+<canvas id="chartMoist"></canvas>
+</div>
+
+<div class="card">
+<div class="title">📈 Slėgis</div>
+<canvas id="chartPress"></canvas>
+</div>
+
+</div>
 
 <script>
 
+// ✅ Įdėk savo tikrą API KEY
 const db = supabase.createClient(
 "https://wbueugwhngtgtifuasvm.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI"
 );
 
 const ESP_ID = "esp1";
+
+let c1, c2, c3;
+
+function avg(arr){
+  return arr.reduce((a,b)=>a+b,0)/arr.length;
+}
 
 async function load(){
 
@@ -53,44 +131,171 @@ let { data, error } = await db
 .select("*")
 .eq("id", ESP_ID)
 .order("timestamp", { ascending:false })
-.limit(10);
+.limit(24);
 
-console.log("DATA:", data);
-console.log("ERROR:", error);
+if(error){
+  console.log(error);
+  return;
+}
 
-// ✅ DEBUG UI
-document.getElementById("debug").textContent =
-JSON.stringify(data?.[0] || "NO DATA", null, 2);
-
-// ❌ jei nėra
-if(!data || data.length===0){
+if(!data || data.length === 0){
   document.getElementById("status").textContent="❌ Nėra duomenų";
   return;
 }
 
-// ✅ test fields
-let temp = data.map(x => x.temp ?? x.temperature ?? 0);
+data.reverse();
 
-document.getElementById("status").textContent =
-"✅ OK, gauta: " + data.length + " įrašų";
+// ✅ tiesioginiai laukai – nes pas tave tokie
+let temp = data.map(x => x.temp);
+let moist = data.map(x => x.moisture);
+let press = data.map(x => x.pressure);
 
-// ✅ chart
-new Chart(chart,{
+let last = data[data.length-1];
+
+// ===== STATUS =====
+const lastTime = new Date(last.timestamp).getTime();
+const diff = (Date.now() - lastTime) / 1000;
+
+let statusEl = document.getElementById("status");
+
+if(diff < 600){
+  statusEl.textContent="🟢 ONLINE";
+  statusEl.className="value green";
+}else{
+  statusEl.textContent="🔴 OFFLINE";
+  statusEl.className="value red";
+}
+
+// ===== AI =====
+let prediction="🌫 Stabilu";
+let rain=0;
+let wind=0;
+
+if(data.length>=5){
+
+ let dp = press[press.length-1] - avg(press.slice(-5));
+ let dh = moist[moist.length-1] - avg(moist.slice(-5));
+
+ if(dp < -4 && dh > 5){
+   prediction="⛈ Lietus";
+   rain=90;
+ }
+ else if(dp < -2){
+   prediction="🌧 Blogėja";
+   rain=60;
+ }
+ else if(dp > 2){
+   prediction="☀️ Gerėja";
+   rain=10;
+ }
+ else{
+   prediction="🌫 Stabilu";
+   rain=20;
+ }
+
+ wind = Math.abs(dp * 2);
+}
+
+document.getElementById("forecast").textContent =
+`${prediction} | 🌧 ${rain}% | 🌬 ${Math.round(wind)} m/s`;
+
+// ===== ALERT =====
+let alerts=[];
+
+if(rain>70) alerts.push("🌧 Lietus");
+if(moist[moist.length-1] < 30) alerts.push("💧 Sausa");
+if(temp[temp.length-1] > 30) alerts.push("🔥 Karšta");
+
+document.getElementById("alerts").textContent =
+alerts.length ? alerts.join(" • ") : "✅ OK";
+
+// ===== WATERING =====
+let water="✅ OK";
+
+if(moist[moist.length-1] < 35 && rain < 40){
+  water="💧 Laistyti";
+}
+if(rain > 60){
+  water="❌ Nelaistyti";
+}
+
+document.getElementById("watering").textContent = water;
+
+// ===== STRESS =====
+let stressVal = temp[temp.length-1] + (100 - moist[moist.length-1]);
+
+let sEl = document.getElementById("stress");
+
+if(stressVal > 120){
+  sEl.textContent="🔴 Pavojus";
+  sEl.className="value red";
+}
+else if(stressVal > 90){
+  sEl.textContent="🟡 Vidutinis";
+  sEl.className="value yellow";
+}
+else{
+  sEl.textContent="🟢 OK";
+  sEl.className="value green";
+}
+
+// ===== GRAFIKAI =====
+if(c1) c1.destroy();
+if(c2) c2.destroy();
+if(c3) c3.destroy();
+
+let labels = data.map(x =>
+  new Date(x.timestamp).toLocaleTimeString([], {
+    hour:"2-digit",
+    minute:"2-digit"
+  })
+);
+
+c1 = new Chart(document.getElementById("chartTemp"), {
  type:'line',
  data:{
-  labels:data.map(x=>x.id),
-  datasets:[{data:temp, borderColor:"red"}]
+  labels,
+  datasets:[{
+    data:temp,
+    borderColor:"#ef4444",
+    tension:0.3
+  }]
+ }
+});
+
+c2 = new Chart(document.getElementById("chartMoist"), {
+ type:'line',
+ data:{
+  labels,
+  datasets:[{
+    data:moist,
+    borderColor:"#3b82f6",
+    tension:0.3
+  }]
+ }
+});
+
+c3 = new Chart(document.getElementById("chartPress"), {
+ type:'line',
+ data:{
+  labels,
+  datasets:[{
+    data:press,
+    borderColor:"#22c55e",
+    tension:0.3
+  }]
  }
 });
 
 } catch(e){
 console.log(e);
-document.getElementById("status").textContent = "💥 JS ERROR";
 }
 
 }
 
+// INIT
 load();
+setInterval(load, 60000);
 
 </script>
 </body>
