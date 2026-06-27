@@ -9,48 +9,18 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {
+body{
   margin:0;
   font-family:sans-serif;
   background:#0f172a;
   color:white;
-  transition:0.5s;
+  transition:0.4s;
 }
-
-.container {
-  max-width:1000px;
-  margin:auto;
-  padding:20px;
-}
-
-.card {
-  background:#111827;
-  border-radius:16px;
-  padding:20px;
-  margin-bottom:15px;
-}
-
-.title {
-  font-size:18px;
-  font-weight:bold;
-}
-
-.badge {
-  margin-top:8px;
-  padding:10px;
-  border-radius:10px;
-  background:#1f2937;
-}
-
-input {
-  padding:8px;
-  border-radius:8px;
-  border:none;
-  background:#1f2937;
-  color:white;
-}
-
-canvas { margin-top:12px; }
+.container{max-width:1000px;margin:auto;padding:20px;}
+.card{background:#111827;border-radius:14px;padding:15px;margin:10px 0;}
+.title{font-weight:bold;margin-bottom:6px;}
+.badge{padding:8px;border-radius:8px;background:#1f2937;}
+canvas{margin-top:10px;}
 </style>
 </head>
 
@@ -59,44 +29,39 @@ canvas { margin-top:12px; }
 <div class="container">
 
 <div class="card">
-<div class="title">📡 STATUS</div>
-<div id="liveStatus" class="badge">–</div>
+<div class="title">📡 Status</div>
+<div id="live" class="badge">–</div>
 </div>
 
 <div class="card">
-<div class="title">📅 Data</div>
-<input type="date" id="datePicker">
-</div>
-
-<div class="card">
-<div class="title">🌦 AI Prognozė</div>
+<div class="title">🌦 AI prognozė</div>
 <div id="forecast" class="badge">–</div>
-<div id="tomorrow"></div>
-</div>
-
-<div class="card">
-<div class="title">⚠️ Alertai</div>
 <div id="alerts"></div>
 </div>
 
 <div class="card">
-<div class="title">🌱 Laistymo rekomendacija</div>
+<div class="title">🌱 Laistymas</div>
 <div id="watering"></div>
 </div>
 
 <div class="card">
-<div class="title">📊 24h statistika</div>
-<div id="stats"></div>
-</div>
-
-<div class="card">
-<div class="title">🔥 Stress indeksas</div>
+<div class="title">🔥 Stress</div>
 <div id="stress"></div>
 </div>
 
 <div class="card">
+<div class="title">🌡 Temperatūra</div>
+<canvas id="chartTemp"></canvas>
+</div>
+
+<div class="card">
+<div class="title">💧 Drėgmė</div>
+<canvas id="chartMoist"></canvas>
+</div>
+
+<div class="card">
 <div class="title">📈 Slėgis</div>
-<canvas id="chartPressure"></canvas>
+<canvas id="chartPress"></canvas>
 </div>
 
 </div>
@@ -108,80 +73,53 @@ const db = supabase.createClient(
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI"
 );
 
-const ESP_ID="esp1";
+const ESP_ID = "esp1";
 
-function avg(a){return a.reduce((x,y)=>x+y,0)/a.length;}
+let chart1, chart2, chart3;
 
-// ===== MAIN =====
-async function loadData(date){
-
-let data;
-
-// ==== load by date ====
-if(date){
- const start=new Date(date+"T00:00:00Z");
- const end=new Date(date+"T23:59:59Z");
-
- let r=await db.from("status_log")
- .select("*")
- .eq("id",ESP_ID)
- .gte("timestamp",start.toISOString())
- .lte("timestamp",end.toISOString())
- .order("timestamp");
-
- data=r.data;
+function avg(arr){
+  return arr.reduce((a,b)=>a+b,0)/arr.length;
 }
 
-// fallback 24h
-if(!data||data.length==0){
- let r=await db.from("status_log")
- .select("*")
- .eq("id",ESP_ID)
- .order("timestamp",{ascending:false})
- .limit(24);
+async function load(){
 
- data=r.data;
- if(data) data.reverse();
-}
+let {data} = await db
+.from("status_log")
+.select("*")
+.eq("id",ESP_ID)
+.order("timestamp",{ascending:false})
+.limit(24);
 
-if(!data||data.length==0){
- document.getElementById("forecast").textContent="❌ Nėra duomenų";
- return;
-}
+if(!data || data.length===0) return;
 
-// ===== LIVE =====
+data.reverse();
+
+// ✅ apsauga nuo undefined
+let temp = data.map(x=>x.temp ?? 0);
+let moist = data.map(x=>x.moisture ?? 0);
+let press = data.map(x=>x.pressure ?? 0);
+
 let last = data[data.length-1];
-let diff=(Date.now()-new Date(last.timestamp))/1000;
 
-document.getElementById("liveStatus").textContent =
- diff<600?"🟢 LIVE":"🔴 OFFLINE";
-
-// ===== ARRAYS =====
-let temp=data.map(x=>x.temp);
-let moist=data.map(x=>x.moisture);
-let press=data.map(x=>x.pressure);
+// ===== STATUS =====
+let diff = (Date.now()-new Date(last.timestamp))/1000;
+document.getElementById("live").textContent =
+diff<600?"🟢 LIVE":"🔴 OFFLINE";
 
 // ===== AI =====
-let prediction="🌫 Stabilu";
+let prediction="Stable";
 let rain=0, wind=0;
 
 if(data.length>=5){
- let pNow=last.pressure;
- let pPrev=avg(data.slice(-5).map(x=>x.pressure));
- let dp=pNow-pPrev;
-
- let hNow=last.moisture;
- let hPrev=avg(data.slice(-5).map(x=>x.moisture));
- let dh=hNow-hPrev;
+ let dp = last.pressure - avg(data.slice(-5).map(x=>x.pressure));
+ let dh = last.moisture - avg(data.slice(-5).map(x=>x.moisture));
 
  if(dp<-4 && dh>5){
    prediction="⛈ Lietus";
    rain=90;
-   wind=dp*-2;
  }else if(dp<-2){
    prediction="🌧 Blogėja";
    rain=60;
-   wind=dp*-2;
  }else if(dp>2){
    prediction="☀️ Gerėja";
    rain=10;
@@ -189,76 +127,70 @@ if(data.length>=5){
    prediction="🌫 Stabilu";
    rain=20;
  }
-
- wind=Math.round(Math.abs(wind));
+ wind=Math.abs(dp*2);
 }
 
+// UI
 document.getElementById("forecast").textContent =
-`${prediction} | 🌧 ${rain}% | 🌬 ${wind}m/s`;
+`${prediction} | 🌧 ${rain}% | 🌬 ${Math.round(wind)}m/s`;
 
-// ===== TOMORROW =====
-document.getElementById("tomorrow").textContent =
- prediction.includes("🌧")?"🔮 Rytoj: lietus tikėtinas":"🔮 Rytoj: stabilu";
-
-// ===== ALERTS =====
-let alerts=[];
-
-if(rain>70) alerts.push("🌧 Artėja lietus");
-if(last.moisture<30) alerts.push("💧 Per sausa");
-if(last.temp>30) alerts.push("🔥 Karšta");
+// ===== ALERT =====
+let a=[];
+if(rain>70) a.push("🌧 Artėja lietus");
+if(last.moisture<30) a.push("💧 Sausa");
 
 document.getElementById("alerts").innerHTML =
- alerts.length?alerts.join("<br>"):"✅ Viskas OK";
+a.length?a.join("<br>"):"✅ OK";
 
-// ===== WATERING =====
-let water="✅ OK";
-if(last.moisture<35 && rain<40) water="💧 Laistyti";
-if(rain>60) water="❌ Nelaistyti (lietus)";
-
-document.getElementById("watering").textContent=water;
-
-// ===== STATS =====
-document.getElementById("stats").textContent =
-`Temp max:${Math.max(...temp).toFixed(1)} | min:${Math.min(...temp).toFixed(1)}`;
+// ===== WATER =====
+let w="OK";
+if(last.moisture<35 && rain<40) w="💧 Laistyti";
+if(rain>60) w="❌ Nelaistyti";
+document.getElementById("watering").textContent=w;
 
 // ===== STRESS =====
-let stressVal=last.temp+(100-last.moisture);
+let stress = last.temp + (100-last.moisture);
+document.getElementById("stress").textContent =
+stress>120?"🔴 HIGH":
+stress>90?"🟡 MID":"🟢 OK";
 
-let stressTxt =
- stressVal>120?"🔴 Pavojus":
- stressVal>90?"🟡 Vidutinis":"🟢 OK";
-
-document.getElementById("stress").textContent=stressTxt;
-
-// ===== BACKGROUND =====
+// ===== BG =====
 if(prediction.includes("☀️")) document.body.style.background="#1e293b";
-else if(prediction.includes("🌧")) document.body.style.background="#020617";
-else if(prediction.includes("⛈")) document.body.style.background="#3b0000";
+if(prediction.includes("🌧")) document.body.style.background="#020617";
+if(prediction.includes("⛈")) document.body.style.background="#3b0000";
 
-// ===== GRAPH =====
-new Chart(document.getElementById("chartPressure"),{
+// ===== GRAPH DESTROY =====
+if(chart1) chart1.destroy();
+if(chart2) chart2.destroy();
+if(chart3) chart3.destroy();
+
+let labels = data.map(x=> new Date(x.timestamp).toLocaleTimeString());
+
+// TEMP
+chart1 = new Chart(document.getElementById("chartTemp"),{
  type:'line',
- data:{
-  labels:data.map(x=>new Date(x.timestamp).toLocaleTimeString()),
-  datasets:[{
-    data:press,
-    borderColor:"#22c55e",
-    tension:0.3
-  }]
- }
+ data:{labels,
+ datasets:[{data:temp,borderColor:"red",tension:0.3}]}
+});
+
+// MOIST
+chart2 = new Chart(document.getElementById("chartMoist"),{
+ type:'line',
+ data:{labels,
+ datasets:[{data:moist,borderColor:"blue",tension:0.3}]}
+});
+
+// PRESS
+chart3 = new Chart(document.getElementById("chartPress"),{
+ type:'line',
+ data:{labels,
+ datasets:[{data:press,borderColor:"lime",tension:0.3}]}
 });
 
 }
 
-// init
-let d=document.getElementById("datePicker");
-let today=new Date().toISOString().slice(0,10);
-
-d.value=today;
-d.onchange=()=>loadData(d.value);
-
-loadData(today);
-setInterval(()=>loadData(d.value),60000);
+load();
+setInterval(load,60000);
 
 </script>
 
