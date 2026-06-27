@@ -702,7 +702,7 @@ function startCountdown() {
 async function loadLastKPI() {
   const { data, error } = await db
     .from("status_log")
-    .select("temp, moisture, pressure")
+    .select("temp, moisture, pressure, lockdown, offline")
     .eq("id", ESP_ID)
     .order("timestamp", { ascending: false })
     .limit(1);
@@ -711,6 +711,7 @@ async function loadLastKPI() {
     document.getElementById("kpiTemp").textContent = "–";
     document.getElementById("kpiMoist").textContent = "–";
     document.getElementById("kpiPress").textContent = "–";
+    document.getElementById("kpiStatus").textContent = "–";
     return;
   }
 
@@ -724,8 +725,17 @@ async function loadLastKPI() {
 
   document.getElementById("kpiPress").textContent =
     row.pressure?.toFixed(0) ?? "–";
-}
 
+  let statusText = "Online";
+
+  if (row.offline) {
+    statusText = "Offline";
+  } else if (row.lockdown) {
+    statusText = "Lockdown";
+  }
+
+  document.getElementById("kpiStatus").textContent = statusText;
+}
 
   
 
