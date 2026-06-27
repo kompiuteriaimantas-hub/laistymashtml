@@ -9,17 +9,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-:root{
-  --bg:#0f172a;
-  --card:#111827;
-  --text:#e5e7eb;
-}
-
 body{
   margin:0;
   font-family:sans-serif;
-  background:linear-gradient(135deg,#0f172a,#020617);
-  color:var(--text);
+  background:#0f172a;
+  color:white;
 }
 
 .container{
@@ -29,7 +23,7 @@ body{
 }
 
 .card{
-  background:var(--card);
+  background:#111827;
   border-radius:16px;
   padding:20px;
   margin-bottom:20px;
@@ -38,15 +32,6 @@ body{
 .title{
   font-size:20px;
   font-weight:bold;
-}
-
-input{
-  margin-top:10px;
-  padding:10px;
-  border-radius:10px;
-  border:none;
-  background:#1f2937;
-  color:white;
 }
 
 canvas{
@@ -58,6 +43,7 @@ canvas{
   padding:10px;
   border-radius:10px;
   font-size:18px;
+  background:#1f2937;
 }
 </style>
 </head>
@@ -66,14 +52,9 @@ canvas{
 <div class="container">
 
 <div class="card">
-  <div class="title">📅 Pasirink dieną</div>
-  <input type="date" id="datePicker">
-</div>
-
-<div class="card">
-  <div class="title">🌦 Orų prognozė</div>
+  <div class="title">🌦 AI orų prognozė</div>
   <div id="weatherPrediction" class="badge">–</div>
-  <div id="pressureStats"></div>
+  <div id="pressureStats" style="margin-top:10px;"></div>
 </div>
 
 <div class="card">
@@ -97,34 +78,31 @@ canvas{
 
 // ===== CONFIG =====
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
-const SUPABASE_KEY = "YOUR_KEY";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";   // <-- įsidėk savo
 const ESP_ID = "esp1";
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let chart1, chart2, chart3;
 
+
 // ===== LOAD DATA =====
-async function loadData(dateStr){
+async function loadData(){
 
-  const start = new Date(dateStr);
-  start.setHours(0,0,0,0);
-
-  const end = new Date(dateStr);
-  end.setHours(23,59,59,999);
-
+  // ✅ stabilus metodas – paskutinės 24h
   const { data } = await db
     .from("status_log")
     .select("*")
     .eq("id", ESP_ID)
-    .gte("timestamp", start.toISOString())
-    .lte("timestamp", end.toISOString())
-    .order("timestamp");
+    .order("timestamp", { ascending: false })
+    .limit(24);
 
   if(!data || data.length === 0){
-    alert("Nėra duomenų");
+    document.getElementById("weatherPrediction").textContent = "Nėra duomenų";
     return;
   }
+
+  data.reverse(); // kad būtų nuo seniausių iki naujausių
 
   const labels = data.map(r =>
     new Date(r.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
@@ -134,29 +112,64 @@ async function loadData(dateStr){
   const moist = data.map(r => r.moisture);
   const press = data.map(r => r.pressure);
 
-  // ===== WEATHER PREDICTION =====
+  // ===== AI WEATHER =====
+  function avg(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+
   let prediction = "🌫 Stabilu";
+  let confidence = 0;
 
-  if (press.length >= 2) {
-    const last = press[press.length - 1];
-    const prev = press[Math.max(press.length - 4, 0)];
-    const diff = last - prev;
+  if (data.length >= 5){
 
-    if (diff > 2) prediction = "☀️ Gerėja oras";
-    else if (diff < -2) prediction = "🌧 Blogėja oras";
+    const last = data[data.length - 1];
+    const prev = data.slice(-5);
+
+    const pNow = last.pressure;
+    const pPrev = avg(prev.map(x=>x.pressure));
+
+    const tNow = last.temp;
+    const tPrev = avg(prev.map(x=>x.temp));
+
+    const hNow = last.moisture;
+    const hPrev = avg(prev.map(x=>x.moisture));
+
+    const dp = pNow - pPrev;
+    const dt = tNow - tPrev;
+    const dh = hNow - hPrev;
+
+    if (dp < -4 && dh > 5) {
+      prediction = "⛈ Greitai lietus";
+    }
+    else if (dp < -2 && dh > 2) {
+      prediction = "🌧 Blogėja oras";
+    }
+    else if (dp > 2 && dt > 1) {
+      prediction = "☀️ Gerėja oras";
+    }
+    else if (Math.abs(dp) < 1) {
+      prediction = "🌫 Stabilu";
+    }
+    else {
+      prediction = "🌤 Nedidelis pokytis";
+    }
+
+    confidence = Math.min(Math.abs(dp)*10 + Math.abs(dh)*5, 100);
   }
 
   const minP = Math.min(...press);
   const maxP = Math.max(...press);
 
-  document.getElementById("weatherPrediction").textContent = prediction;
-  document.getElementById("pressureStats").textContent =
-    `Slėgis: ${press[press.length - 1].toFixed(0)} hPa | Min: ${minP} | Max: ${maxP}`;
+  document.getElementById("weatherPrediction").textContent =
+    prediction + " (" + Math.round(confidence) + "%)";
 
-  // DESTROY OLD
+  document.getElementById("pressureStats").textContent =
+    `Dabar: ${press[press.length-1].toFixed(0)} hPa | Min: ${minP} | Max: ${maxP}`;
+
+
+  // DESTROY old
   if(chart1) chart1.destroy();
   if(chart2) chart2.destroy();
   if(chart3) chart3.destroy();
+
 
   // TEMP
   chart1 = new Chart(document.getElementById("chartTemp"), {
@@ -168,12 +181,13 @@ async function loadData(dateStr){
         data:temp,
         borderColor:"#ef4444",
         tension:0.3,
-        pointRadius:(ctx)=>ctx.dataIndex===temp.length-1?6:2
+        pointRadius:(c)=>c.dataIndex===temp.length-1?6:2
       }]
     }
   });
 
-  // MOISTURE
+
+  // MOIST
   chart2 = new Chart(document.getElementById("chartMoist"), {
     type:'line',
     data:{
@@ -183,16 +197,16 @@ async function loadData(dateStr){
         data:moist,
         borderColor:"#3b82f6",
         tension:0.3,
-        pointRadius:(ctx)=>ctx.dataIndex===moist.length-1?6:2
+        pointRadius:(c)=>c.dataIndex===moist.length-1?6:2
       }]
     }
   });
 
-  // PRESSURE COLOR LOGIC
+
+  // PRESSURE
   const lastP = press[press.length-1];
   const color = lastP < 1000 ? "#ef4444" : "#22c55e";
 
-  // PRESSURE
   chart3 = new Chart(document.getElementById("chartPressure"), {
     type:'line',
     data:{
@@ -202,20 +216,17 @@ async function loadData(dateStr){
         data:press,
         borderColor:color,
         tension:0.3,
-        pointRadius:(ctx)=>ctx.dataIndex===press.length-1?6:2
+        pointRadius:(c)=>c.dataIndex===press.length-1?6:2
       }]
     }
   });
+
 }
 
-// ===== INIT =====
-const datePicker = document.getElementById("datePicker");
-const today = new Date().toISOString().slice(0,10);
 
-datePicker.value = today;
-datePicker.onchange = () => loadData(datePicker.value);
-
-loadData(today);
+// ===== AUTO REFRESH =====
+loadData();
+setInterval(loadData, 60000); // kas 1 min atsinaujina
 
 </script>
 
