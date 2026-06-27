@@ -2,7 +2,7 @@
 <html lang="lt">
 <head>
 <meta charset="UTF-8">
-<title>Grafikų panelė</title>
+<title>Grafikų panelė PRO</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -34,8 +34,13 @@ body{
   font-weight:bold;
 }
 
-canvas{
-  margin-top:15px;
+input{
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  background:#1f2937;
+  color:white;
 }
 
 .badge{
@@ -45,6 +50,10 @@ canvas{
   font-size:18px;
   background:#1f2937;
 }
+
+canvas{
+  margin-top:15px;
+}
 </style>
 </head>
 
@@ -52,9 +61,14 @@ canvas{
 <div class="container">
 
 <div class="card">
+  <div class="title">📅 Data</div>
+  <input type="date" id="datePicker">
+</div>
+
+<div class="card">
   <div class="title">🌦 AI orų prognozė</div>
   <div id="weatherPrediction" class="badge">–</div>
-  <div id="pressureStats" style="margin-top:10px;"></div>
+  <div id="extraStats"></div>
 </div>
 
 <div class="card">
@@ -78,7 +92,7 @@ canvas{
 
 // ===== CONFIG =====
 const SUPABASE_URL = "https://wbueugwhngtgtifuasvm.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";   // <-- įsidėk savo
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI";
 const ESP_ID = "esp1";
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -87,23 +101,45 @@ let chart1, chart2, chart3;
 
 
 // ===== LOAD DATA =====
-async function loadData(){
+async function loadData(dateStr){
 
-  // ✅ stabilus metodas – paskutinės 24h
-  const { data } = await db
-    .from("status_log")
-    .select("*")
-    .eq("id", ESP_ID)
-    .order("timestamp", { ascending: false })
-    .limit(24);
+  let data;
+
+  // jei pasirinkta data → bandom filtruoti
+  if(dateStr){
+    const start = new Date(dateStr + "T00:00:00Z");
+    const end = new Date(dateStr + "T23:59:59Z");
+
+    const res = await db
+      .from("status_log")
+      .select("*")
+      .eq("id", ESP_ID)
+      .gte("timestamp", start.toISOString())
+      .lte("timestamp", end.toISOString())
+      .order("timestamp");
+
+    data = res.data;
+  }
+
+  // fallback jei nėra → paskutinės 24h
+  if(!data || data.length === 0){
+    const res = await db
+      .from("status_log")
+      .select("*")
+      .eq("id", ESP_ID)
+      .order("timestamp", { ascending:false })
+      .limit(24);
+
+    data = res.data;
+    if(data) data.reverse();
+  }
 
   if(!data || data.length === 0){
-    document.getElementById("weatherPrediction").textContent = "Nėra duomenų";
+    document.getElementById("weatherPrediction").textContent = "❌ Nėra duomenų";
     return;
   }
 
-  data.reverse(); // kad būtų nuo seniausių iki naujausių
-
+  // ===== PARSING =====
   const labels = data.map(r =>
     new Date(r.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
   );
@@ -112,64 +148,59 @@ async function loadData(){
   const moist = data.map(r => r.moisture);
   const press = data.map(r => r.pressure);
 
-  // ===== AI WEATHER =====
   function avg(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
 
   let prediction = "🌫 Stabilu";
-  let confidence = 0;
+  let rainChance = 0;
+  let wind = 0;
 
   if (data.length >= 5){
 
     const last = data[data.length - 1];
     const prev = data.slice(-5);
 
-    const pNow = last.pressure;
-    const pPrev = avg(prev.map(x=>x.pressure));
+    const dp = last.pressure - avg(prev.map(x=>x.pressure));
+    const dh = last.moisture - avg(prev.map(x=>x.moisture));
+    const dt = last.temp - avg(prev.map(x=>x.temp));
 
-    const tNow = last.temp;
-    const tPrev = avg(prev.map(x=>x.temp));
-
-    const hNow = last.moisture;
-    const hPrev = avg(prev.map(x=>x.moisture));
-
-    const dp = pNow - pPrev;
-    const dt = tNow - tPrev;
-    const dh = hNow - hPrev;
-
-    if (dp < -4 && dh > 5) {
-      prediction = "⛈ Greitai lietus";
+    // ===== AI logic =====
+    if (dp < -4 && dh > 5){
+      prediction = "⛈ Artėja lietus";
+      rainChance = 80 + Math.abs(dp)*3;
+      wind = Math.abs(dp)*2;
     }
-    else if (dp < -2 && dh > 2) {
+    else if (dp < -2){
       prediction = "🌧 Blogėja oras";
+      rainChance = 50 + Math.abs(dp)*5;
+      wind = Math.abs(dp)*2;
     }
-    else if (dp > 2 && dt > 1) {
+    else if (dp > 2){
       prediction = "☀️ Gerėja oras";
+      rainChance = 10;
+      wind = Math.abs(dp);
     }
-    else if (Math.abs(dp) < 1) {
+    else{
       prediction = "🌫 Stabilu";
-    }
-    else {
-      prediction = "🌤 Nedidelis pokytis";
+      rainChance = 20;
+      wind = 2;
     }
 
-    confidence = Math.min(Math.abs(dp)*10 + Math.abs(dh)*5, 100);
+    rainChance = Math.min(Math.round(rainChance),100);
+    wind = Math.round(wind);
   }
 
-  const minP = Math.min(...press);
-  const maxP = Math.max(...press);
-
+  // UI
   document.getElementById("weatherPrediction").textContent =
-    prediction + " (" + Math.round(confidence) + "%)";
+    `${prediction} | 🌧 ${rainChance}% | 🌬 ${wind} m/s`;
 
-  document.getElementById("pressureStats").textContent =
-    `Dabar: ${press[press.length-1].toFixed(0)} hPa | Min: ${minP} | Max: ${maxP}`;
+  document.getElementById("extraStats").textContent =
+    `Slėgis: ${press[press.length-1].toFixed(0)} hPa | Min: ${Math.min(...press)} | Max: ${Math.max(...press)}`;
 
 
   // DESTROY old
   if(chart1) chart1.destroy();
   if(chart2) chart2.destroy();
   if(chart3) chart3.destroy();
-
 
   // TEMP
   chart1 = new Chart(document.getElementById("chartTemp"), {
@@ -186,7 +217,6 @@ async function loadData(){
     }
   });
 
-
   // MOIST
   chart2 = new Chart(document.getElementById("chartMoist"), {
     type:'line',
@@ -201,7 +231,6 @@ async function loadData(){
       }]
     }
   });
-
 
   // PRESSURE
   const lastP = press[press.length-1];
@@ -224,9 +253,23 @@ async function loadData(){
 }
 
 
-// ===== AUTO REFRESH =====
-loadData();
-setInterval(loadData, 60000); // kas 1 min atsinaujina
+// ===== INIT =====
+const datePicker = document.getElementById("datePicker");
+const today = new Date().toISOString().slice(0,10);
+
+datePicker.value = today;
+
+datePicker.onchange = () => loadData(datePicker.value);
+
+// pirmas load
+loadData(today);
+
+// auto refresh (tik kai rodom šiandieną)
+setInterval(()=>{
+  if(datePicker.value === today){
+    loadData(today);
+  }
+},60000);
 
 </script>
 
