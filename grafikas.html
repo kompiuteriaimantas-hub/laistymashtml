@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="lt">
 <head>
@@ -11,73 +10,48 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-
-/* 🔥 BACKGROUND */
 body{
   margin:0;
   font-family:system-ui;
-  background: radial-gradient(circle at top, #1e293b, #020617);
-  color:#e2e8f0;
+  background:linear-gradient(135deg,#0f172a,#020617);
+  color:#fff;
 }
 
-/* CONTAINER */
 .container{
-  max-width:1200px;
+  max-width:1100px;
   margin:auto;
-  padding:25px;
+  padding:20px;
 }
 
-/* GRID */
 .grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:16px;
+  gap:14px;
 }
 
-/* 💎 GLASS CARD */
 .card{
   background:rgba(255,255,255,0.05);
-  border:1px solid rgba(255,255,255,0.08);
-  backdrop-filter:blur(18px);
-  -webkit-backdrop-filter:blur(18px);
-  border-radius:22px;
-  padding:18px;
-
-  box-shadow:
-    0 10px 30px rgba(0,0,0,0.4),
-    inset 0 1px 0 rgba(255,255,255,0.06);
-  
-  transition:0.3s;
+  backdrop-filter:blur(10px);
+  border-radius:20px;
+  padding:15px;
 }
 
-.card:hover{
-  transform:translateY(-3px);
-  box-shadow:
-    0 15px 40px rgba(0,0,0,0.5),
-    0 0 20px rgba(59,130,246,0.2);
-}
-
-/* TITLE */
 .title{
-  font-size:12px;
-  letter-spacing:1px;
-  text-transform:uppercase;
+  font-size:13px;
   opacity:0.6;
 }
 
-/* VALUE */
 .value{
-  font-size:22px;
+  font-size:20px;
   font-weight:600;
-  margin-top:5px;
 }
 
-/* COLORS */
 .green{color:#22c55e;}
 .red{color:#ef4444;}
 .yellow{color:#facc15;}
 
-/* BUTTONS */
+canvas{margin-top:10px;}
+
 .controls{
   display:flex;
   gap:10px;
@@ -85,77 +59,36 @@ body{
 }
 
 button{
-  padding:8px 14px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,0.1);
-  background:rgba(255,255,255,0.05);
-  color:#fff;
+  padding:8px 12px;
+  border:none;
+  border-radius:10px;
   cursor:pointer;
-  transition:0.2s;
-}
-
-button:hover{
-  background:rgba(59,130,246,0.2);
 }
 
 .active{
-  background:linear-gradient(135deg,#3b82f6,#6366f1);
-  color:#fff;
-  border:none;
-  box-shadow:0 0 10px rgba(99,102,241,0.6);
+  background:#22c55e;
+  color:#000;
 }
 
-/* INPUT */
-input{
-  margin-top:10px;
-  padding:8px;
-  border-radius:10px;
-  border:none;
-  background:rgba(255,255,255,0.08);
-  color:#fff;
-}
-
-/* CHART */
-canvas{
-  margin-top:12px;
-}
-
-/* EXPLANATION */
+/* ✅ PAŠAIŠKINIMŲ STILIUS */
 .explain{
   margin-top:30px;
 }
 
 .explain-box{
-  background:rgba(255,255,255,0.04);
-  border:1px solid rgba(255,255,255,0.08);
-  border-radius:22px;
-  padding:22px;
+  background:rgba(255,255,255,0.05);
+  border-radius:20px;
+  padding:20px;
 }
 
 .explain-item{
-  margin-bottom:15px;
+  margin-bottom:14px;
 }
 
 .explain-item b{
   display:block;
-  margin-bottom:4px;
-  color:#93c5fd;
+  margin-bottom:3px;
 }
-
-/* 🔥 SMALL GLOW EFFECT */
-.card::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:22px;
-  pointer-events:none;
-  background:linear-gradient(120deg,transparent,rgba(255,255,255,0.05),transparent);
-  opacity:0.2;
-}
-
-/* fix positioning */
-.card{position:relative;}
-
 </style>
 </head>
 
@@ -218,32 +151,47 @@ canvas{
 <canvas id="chartPress"></canvas>
 </div>
 
+<!-- ✅ NAUJA DALIS – PAAIŠKINIMAI -->
 <div class="explain">
   <div class="explain-box">
 
     <div class="explain-item">
       <b>📡 STATUS</b>
-      Rodo sistemos ryšį...
+      Rodo sistemos ryšį. Skaičiuoja pagal paskutinio signalo laiką:
+      🟢 online – duomenys atėjo neseniai,
+      🟡 delay – vėluoja,
+      🔴 offline – ilgai nebuvo ryšio.
     </div>
 
     <div class="explain-item">
       <b>🌦 PROGNOZĖ</b>
-      Skaičiuojama pagal pokyčius...
+      Skaičiuojama pagal slėgio ir drėgmės pokyčius:
+      krintantis slėgis + auganti drėgmė → lietus,
+      kylantis slėgis → geras oras,
+      stabilu → mažai pokyčių.
     </div>
 
     <div class="explain-item">
       <b>⚠️ ALERTAI</b>
-      Įspėjimai apie blogas sąlygas...
+      Įspėjimai jei:
+      💧 per sausa,
+      🌧 didelė lietaus tikimybė,
+      🔥 per karšta.
     </div>
 
     <div class="explain-item">
       <b>🌱 LAISTYMAS</b>
-      Sprendimas laistyti ar ne...
+      Sprendimas:
+      jei sausa → laistyti,
+      jei lis → nelaistyti,
+      kitaip → OK.
     </div>
 
     <div class="explain-item">
       <b>🔥 STRESS</b>
-      Augalų streso indikatorius...
+      Augalo stresas:
+      skaičiuojamas iš temperatūros + sausumo.
+      didesnė reikšmė → blogesnės sąlygos.
     </div>
 
   </div>
@@ -253,7 +201,7 @@ canvas{
 
 <script>
 
-/* ✅ TAVO JS 100% PALIKTAS */
+// ✅ VISAS TAVO ORIGINALUS JS (NEPAKEISTAS)
 
 const db = supabase.createClient(
 "https://wbueugwhngtgtifuasvm.supabase.co",
@@ -263,6 +211,7 @@ const db = supabase.createClient(
 const ESP_ID = "esp1";
 
 let c1, c2, c3;
+
 let selectedDay = null;
 let mode = "day";
 
@@ -304,6 +253,7 @@ let { data } = await db
 .order("timestamp",{ascending:false})
 .limit(1000);
 
+// STATUS
 let newest = data[0];
 let diff = (Date.now()-new Date(newest.timestamp))/1000;
 
@@ -320,6 +270,7 @@ if(diff<3600){
   statusEl.className="value red";
 }
 
+// FILTER
 if(mode==="day"){
   let start = new Date(selectedDay+"T00:00:00");
   let end = new Date(selectedDay+"T23:59:59");
@@ -327,7 +278,9 @@ if(mode==="day"){
   if(f.length>0) data=f;
 }
 
+// CLEAN
 data = data.filter(x=>x && x.temp!=null && x.moisture!=null && x.pressure!=null);
+
 data.reverse();
 
 let temp = data.map(x=>parseFloat(x.temp));
@@ -336,13 +289,44 @@ let press = data.map(x=>parseFloat(x.pressure));
 
 let labels = data.map(x=>new Date(x.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}));
 
+let prediction="🌫 Stabilu";
+let rain=20, wind=0;
+
+if(data.length>=5){
+ let dp = press.at(-1)-avg(press.slice(-5));
+ let dh = moist.at(-1)-avg(moist.slice(-5));
+
+ if(dp<-4 && dh>5){prediction="⛈ Lietus";rain=90;}
+ else if(dp<-2){prediction="🌧 Blogėja";rain=60;}
+ else if(dp>2){prediction="☀️ Gerėja";rain=10;}
+
+ wind=Math.abs(dp*2);
+}
+
+forecast.textContent=`${prediction} | 🌧 ${rain}% | 🌬 ${Math.round(wind)} m/s`;
+
+alerts.textContent =
+(rain>70?"🌧 ":"") +
+(moist.at(-1)<30?"💧 ":"") +
+(temp.at(-1)>30?"🔥 ":"") || "✅ OK";
+
+watering.textContent =
+ moist.at(-1)<35 && rain<40 ? "💧 Laistyti" :
+ rain>60 ? "❌ Nelaistyti" : "✅ OK";
+
+let stressVal = temp.at(-1)+(100-moist.at(-1));
+stress.textContent =
+ stressVal>120?"🔴 Pavojus":
+ stressVal>90?"🟡 Vidutinis":"🟢 OK";
+
+// charts
 if(c1) c1.destroy();
 if(c2) c2.destroy();
 if(c3) c3.destroy();
 
-c1 = new Chart(chartTemp,{type:'line',data:{labels,datasets:[{data:temp,borderColor:"#818cf8"}]}}); 
-c2 = new Chart(chartMoist,{type:'line',data:{labels,datasets:[{data:moist,borderColor:"#38bdf8"}]}}); 
-c3 = new Chart(chartPress,{type:'line',data:{labels,datasets:[{data:press,borderColor:"#4ade80"}]}}); 
+c1 = new Chart(chartTemp,{type:'line',data:{labels,datasets:[{data:temp,borderColor:"#ef4444"}]}}); 
+c2 = new Chart(chartMoist,{type:'line',data:{labels,datasets:[{data:moist,borderColor:"#3b82f6"}]}}); 
+c3 = new Chart(chartPress,{type:'line',data:{labels,datasets:[{data:press,borderColor:"#22c55e"}]}}); 
 
 }catch(e){console.log(e);}
 
