@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="lt">
 <head>
@@ -8,6 +10,9 @@
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- ✅ ZOOM plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
 
 <style>
 body{
@@ -20,21 +25,25 @@ body{
 .container{
   max-width:1100px;
   margin:auto;
-  padding:20px;
+  padding:15px;
+}
+
+/* ✅ MOBILE */
+@media(max-width:600px){
+  .value{font-size:18px;}
 }
 
 .grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:14px;
+  gap:12px;
 }
 
 .card{
   background:rgba(255,255,255,0.05);
   backdrop-filter:blur(10px);
-  border-radius:20px;
-  padding:15px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.3);
+  border-radius:18px;
+  padding:14px;
 }
 
 .title{
@@ -45,14 +54,37 @@ body{
 .value{
   font-size:20px;
   font-weight:600;
-  margin-top:4px;
 }
 
 .green{color:#22c55e;}
 .red{color:#ef4444;}
 .yellow{color:#facc15;}
 
-canvas{margin-top:10px;}
+.controls{
+  display:flex;
+  gap:10px;
+  margin-top:8px;
+}
+
+button{
+  padding:6px 10px;
+  border:none;
+  border-radius:10px;
+}
+
+.active{
+  background:#22c55e;
+  color:#000;
+}
+
+/* ✅ explain */
+.explain{margin-top:30px;}
+.explain-box{
+  background:rgba(255,255,255,0.05);
+  border-radius:20px;
+  padding:20px;
+}
+.explain-item{margin-bottom:12px;}
 </style>
 </head>
 
@@ -90,6 +122,17 @@ canvas{margin-top:10px;}
 </div>
 
 <div class="card">
+<div class="title">📊 Laikotarpis</div>
+
+<div class="controls">
+  <button id="btnDay" class="active">📅 Diena</button>
+  <button id="btnAll">📊 Visi</button>
+</div>
+
+<input type="date" id="dayPicker">
+</div>
+
+<div class="card">
 <div class="title">🌡 Temperatūra</div>
 <canvas id="chartTemp"></canvas>
 </div>
@@ -104,11 +147,42 @@ canvas{margin-top:10px;}
 <canvas id="chartPress"></canvas>
 </div>
 
+<!-- ✅ explain -->
+<div class="explain">
+<div class="explain-box">
+
+<div class="explain-item">
+<b>📡 STATUS</b>
+Pagal paskutinį signalą: online <1h, delay <3h, offline >3h
+</div>
+
+<div class="explain-item">
+<b>🌦 PROGNOZĖ</b>
+Naudojamas slėgio trendas + drėgmės pokytis (AI logika)
+</div>
+
+<div class="explain-item">
+<b>⚠️ ALERTAI</b>
+Rodo sausra / karštį / lietų
+</div>
+
+<div class="explain-item">
+<b>🌱 LAISTYMAS</b>
+Sprendimas pagal drėgmę + lietų
+</div>
+
+<div class="explain-item">
+<b>🔥 STRESS</b>
+Temp + sausumo suma
+</div>
+
+</div>
+</div>
+
 </div>
 
 <script>
 
-// ✅ tavo config
 const db = supabase.createClient(
 "https://wbueugwhngtgtifuasvm.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI"
@@ -116,210 +190,141 @@ const db = supabase.createClient(
 
 const ESP_ID = "esp1";
 
-let c1, c2, c3;
+let mode="day";
+let selectedDay=null;
 
-// avg helper
-function avg(arr){
-  return arr.reduce((a,b)=>a+b,0)/arr.length;
-}
+let c1,c2,c3;
+
+function avg(a){return a.reduce((x,y)=>x+y,0)/a.length;}
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+const p=document.getElementById("dayPicker");
+
+let d=new Date();
+let t=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0');
+
+p.value=t;
+selectedDay=t;
+
+p.onchange=()=>{selectedDay=p.value;load();};
+
+btnDay.onclick=()=>{mode="day";btnDay.classList.add("active");btnAll.classList.remove("active");load();};
+btnAll.onclick=()=>{mode="all";btnAll.classList.add("active");btnDay.classList.remove("active");load();};
+
+});
 
 async function load(){
 
-try {
+let {data}=await db.from("status_log").select("*").eq("id",ESP_ID).order("timestamp",{ascending:false}).limit(1000);
 
-let { data, error } = await db
-.from("status_log")
-.select("*")
-.eq("id", ESP_ID)
-.order("timestamp", { ascending:false })
-.limit(24);
+if(!data||data.length===0) return;
 
-if(error){
-  console.log(error);
-  return;
+// STATUS
+let newest=data[0];
+let diff=(Date.now()-new Date(newest.timestamp))/1000;
+
+if(diff<3600){status.innerHTML="🟢 ONLINE";}
+else if(diff<10800){status.innerHTML="🟡 DELAY";}
+else{status.innerHTML="🔴 OFFLINE";}
+
+// FILTER
+if(mode==="day"){
+ let s=new Date(selectedDay+"T00:00:00");
+ let e=new Date(selectedDay+"T23:59:59");
+ let f=data.filter(x=>new Date(x.timestamp)>=s && new Date(x.timestamp)<=e);
+ if(f.length>0)data=f;
 }
 
-if(!data || data.length === 0){
-  document.getElementById("status").textContent="❌ Nėra duomenų";
-  return;
-}
+// clean
+data=data.filter(x=>x.temp!=null);
 
-// ✅ FIX – filtruojam blogus įrašus
-data = data.filter(x =>
-  x &&
-  x.timestamp &&
-  !isNaN(parseFloat(x.temp)) &&
-  !isNaN(parseFloat(x.moisture)) &&
-  !isNaN(parseFloat(x.pressure))
-);
-
-if(data.length === 0){
-  document.getElementById("status").textContent="❌ Blogi duomenys";
-  return;
-}
-
+// reverse
 data.reverse();
 
-// ✅ FIX – parseFloat
-let temp = data.map(x => parseFloat(x.temp));
-let moist = data.map(x => parseFloat(x.moisture));
-let press = data.map(x => parseFloat(x.pressure));
+let temp=data.map(x=>parseFloat(x.temp)||0);
+let moist=data.map(x=>parseFloat(x.moisture)||0);
+let press=data.map(x=>parseFloat(x.pressure)||0);
 
-// ✅ VIENAS labels (be bug)
-let labels = data.map(x => {
-  const d = new Date(x.timestamp);
-  return isNaN(d) ? "" :
-    d.toLocaleTimeString([], {
-      hour:"2-digit",
-      minute:"2-digit"
-    });
-});
+let labels=data.map(x=>new Date(x.timestamp).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}));
 
-let last = data[data.length-1];
-
-// ===== STATUS =====
-const diff = (Date.now() - new Date(last.timestamp).getTime()) / 1000;
-
-let statusEl = document.getElementById("status");
-
-if(diff < 1800){
-  statusEl.textContent="🟢 ONLINE";
-  statusEl.className="value green";
-}else if(diff < 7200){
-  statusEl.textContent="🟡 DELAY";
-  statusEl.className="value yellow";
-}else{
-  statusEl.textContent="🔴 OFFLINE";
-  statusEl.className="value red";
-}
-
-// ===== AI =====
+// ✅ GERESNĖ AI
 let prediction="🌫 Stabilu";
-let rain=0;
-let wind=0;
+let rain=20;
 
-if(data.length>=5){
+if(data.length>5){
 
- let dp = press[press.length-1] - avg(press.slice(-5));
- let dh = moist[moist.length-1] - avg(moist.slice(-5));
+ let pNow=press.at(-1);
+ let pOld=press.at(-5);
+ let trend=pNow-pOld;
 
- if(dp < -4 && dh > 5){
+ let hNow=moist.at(-1);
+ let hOld=moist.at(-5);
+
+ if(trend<-3 && hNow>hOld+4){
    prediction="⛈ Lietus";
-   rain=90;
+   rain=85;
  }
- else if(dp < -2){
+ else if(trend<-2){
    prediction="🌧 Blogėja";
    rain=60;
  }
- else if(dp > 2){
+ else if(trend>2){
    prediction="☀️ Gerėja";
    rain=10;
  }
- else{
-   prediction="🌫 Stabilu";
-   rain=20;
- }
-
- wind = Math.abs(dp * 2);
 }
 
-document.getElementById("forecast").textContent =
-`${prediction} | 🌧 ${rain}% | 🌬 ${Math.round(wind)} m/s`;
+forecast.innerHTML=prediction+" | 🌧 "+rain+"%";
 
-// ===== ALERTai =====
-let alerts = [];
+// alerts
+alerts.innerHTML =
+(rain>70?"🌧 ":"") +
+(moist.at(-1)<30?"💧 ":"") +
+(temp.at(-1)>30?"🔥 ":"") || "✅ OK";
 
-if(rain > 70) alerts.push("🌧 Lietus");
-if(moist[moist.length-1] < 30) alerts.push("💧 Sausa");
-if(temp[temp.length-1] > 30) alerts.push("🔥 Karšta");
+// watering
+watering.innerHTML =
+ moist.at(-1)<35 && rain<40 ? "💧 Laistyti" :
+ rain>60 ? "❌ Nelaistyti" : "✅ OK";
 
-document.getElementById("alerts").textContent =
-alerts.length ? alerts.join(" • ") : "✅ OK";
+// stress
+let s=temp.at(-1)+(100-moist.at(-1));
+stress.innerHTML = s>120?"🔴 Pavojus":s>90?"🟡 Vidutinis":"🟢 OK";
 
-// ===== WATERING =====
-let water="✅ OK";
+// destroy
+if(c1)c1.destroy();
+if(c2)c2.destroy();
+if(c3)c3.destroy();
 
-if(moist[moist.length-1] < 35 && rain < 40){
-  water="💧 Laistyti";
-}
-if(rain > 60){
-  water="❌ Nelaistyti";
-}
+// ✅ ZOOM enabled
+const zoomOpt={
+  pan:{enabled:true,mode:'x'},
+  zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x'}
+};
 
-document.getElementById("watering").textContent = water;
-
-// ===== STRESS =====
-let stressVal = temp[temp.length-1] + (100 - moist[moist.length-1]);
-
-let sEl = document.getElementById("stress");
-
-if(stressVal > 120){
-  sEl.textContent="🔴 Pavojus";
-  sEl.className="value red";
-}
-else if(stressVal > 90){
-  sEl.textContent="🟡 Vidutinis";
-  sEl.className="value yellow";
-}
-else{
-  sEl.textContent="🟢 OK";
-  sEl.className="value green";
-}
-
-// ===== CHART DESTROY =====
-if(c1) c1.destroy();
-if(c2) c2.destroy();
-if(c3) c3.destroy();
-
-// ===== GRAFIKAI =====
-c1 = new Chart(document.getElementById("chartTemp"), {
+c1=new Chart(chartTemp,{
  type:'line',
- data:{
-  labels,
-  datasets:[{
-    label:"°C",
-    data:temp,
-    borderColor:"#ef4444",
-    tension:0.3
-  }]
- }
+ data:{labels,datasets:[{data:temp,borderColor:"#ef4444"}]},
+ options:{plugins:{zoom:zoomOpt}}
 });
 
-c2 = new Chart(document.getElementById("chartMoist"), {
+c2=new Chart(chartMoist,{
  type:'line',
- data:{
-  labels,
-  datasets:[{
-    label:"%",
-    data:moist,
-    borderColor:"#3b82f6",
-    tension:0.3
-  }]
- }
+ data:{labels,datasets:[{data:moist,borderColor:"#3b82f6"}]},
+ options:{plugins:{zoom:zoomOpt}}
 });
 
-c3 = new Chart(document.getElementById("chartPress"), {
+c3=new Chart(chartPress,{
  type:'line',
- data:{
-  labels,
-  datasets:[{
-    label:"hPa",
-    data:press,
-    borderColor:"#22c55e",
-    tension:0.3
-  }]
- }
+ data:{labels,datasets:[{data:press,borderColor:"#22c55e"}]},
+ options:{plugins:{zoom:zoomOpt}}
 });
-
-} catch(e){
-console.log("ERROR:", e);
-}
 
 }
 
-// init
 load();
-setInterval(load, 60000);
+setInterval(load,60000);
 
 </script>
 
