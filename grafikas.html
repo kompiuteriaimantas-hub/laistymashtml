@@ -53,6 +53,13 @@ body{
 .yellow{color:#facc15;}
 
 canvas{margin-top:10px;}
+
+input[type="date"]{
+  padding:8px;
+  border-radius:10px;
+  border:none;
+  margin-top:5px;
+}
 </style>
 </head>
 
@@ -89,6 +96,12 @@ canvas{margin-top:10px;}
 
 </div>
 
+<!-- ✅ NAUJA DALIS -->
+<div class="card">
+  <div class="title">📅 Pasirink dieną</div>
+  <input type="date" id="dayPicker">
+</div>
+
 <div class="card">
 <div class="title">🌡 Temperatūra</div>
 <canvas id="chartTemp"></canvas>
@@ -118,10 +131,29 @@ const ESP_ID = "esp1";
 
 let c1, c2, c3;
 
+// ✅ naujas kintamasis
+let selectedDay = null;
+
 // avg helper
 function avg(arr){
   return arr.reduce((a,b)=>a+b,0)/arr.length;
 }
+
+// ✅ DATE INIT
+document.addEventListener("DOMContentLoaded", () => {
+  const picker = document.getElementById("dayPicker");
+
+  const today = new Date();
+  const iso = today.toISOString().split("T")[0];
+
+  picker.value = iso;
+  selectedDay = iso;
+
+  picker.addEventListener("change", () => {
+    selectedDay = picker.value;
+    load();
+  });
+});
 
 async function load(){
 
@@ -132,11 +164,20 @@ let { data, error } = await db
 .select("*")
 .eq("id", ESP_ID)
 .order("timestamp", { ascending:false })
-.limit(24);
+.limit(200); // ✅ padidinta kad turėtum daugiau dienų
 
 if(error){
   console.log(error);
   return;
+}
+
+// ✅ FILTRAS PAGAL DIENĄ
+if(selectedDay){
+  data = data.filter(x => {
+    const d = new Date(x.timestamp);
+    const dateStr = d.toISOString().split("T")[0];
+    return dateStr === selectedDay;
+  });
 }
 
 if(!data || data.length === 0){
@@ -144,7 +185,7 @@ if(!data || data.length === 0){
   return;
 }
 
-// ✅ FIX – filtruojam blogus įrašus
+// ✅ FIX blogi duomenys
 data = data.filter(x =>
   x &&
   x.timestamp &&
@@ -160,12 +201,10 @@ if(data.length === 0){
 
 data.reverse();
 
-// ✅ FIX – parseFloat
 let temp = data.map(x => parseFloat(x.temp));
 let moist = data.map(x => parseFloat(x.moisture));
 let press = data.map(x => parseFloat(x.pressure));
 
-// ✅ VIENAS labels (be bug)
 let labels = data.map(x => {
   const d = new Date(x.timestamp);
   return isNaN(d) ? "" :
@@ -266,7 +305,7 @@ else{
   sEl.className="value green";
 }
 
-// ===== CHART DESTROY =====
+// ===== DESTROY =====
 if(c1) c1.destroy();
 if(c2) c2.destroy();
 if(c3) c3.destroy();
