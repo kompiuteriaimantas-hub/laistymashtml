@@ -19,8 +19,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 Adafruit_BMP280 bmp;
 
 // ---- WiFi ----
-const char* ssid     = "DungeonKeeper";
-const char* password = "95-BpSg:asilas695";
+const char* ssid     = "";
+const char* password = "";
 
 // ---- Supabase ----
 const char* SUPABASE_STATUS_URL    = "https://wbueugwhngtgtifuasvm.supabase.co/rest/v1/status_log";
