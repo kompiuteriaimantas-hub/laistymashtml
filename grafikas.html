@@ -34,7 +34,6 @@ body{
   backdrop-filter:blur(10px);
   border-radius:20px;
   padding:15px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.3);
 }
 
 .title{
@@ -45,7 +44,6 @@ body{
 .value{
   font-size:20px;
   font-weight:600;
-  margin-top:4px;
 }
 
 .green{color:#22c55e;}
@@ -53,13 +51,6 @@ body{
 .yellow{color:#facc15;}
 
 canvas{margin-top:10px;}
-
-input[type="date"]{
-  padding:8px;
-  border-radius:10px;
-  border:none;
-  margin-top:5px;
-}
 </style>
 </head>
 
@@ -96,10 +87,9 @@ input[type="date"]{
 
 </div>
 
-<!-- ✅ NAUJA DALIS -->
 <div class="card">
-  <div class="title">📅 Pasirink dieną</div>
-  <input type="date" id="dayPicker">
+<div class="title">📅 Pasirink dieną</div>
+<input type="date" id="dayPicker">
 </div>
 
 <div class="card">
@@ -121,30 +111,30 @@ input[type="date"]{
 
 <script>
 
-// ✅ tavo config
 const db = supabase.createClient(
 "https://wbueugwhngtgtifuasvm.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI"
+"YOUR_KEY_HERE"
 );
 
 const ESP_ID = "esp1";
 
 let c1, c2, c3;
-
-// ✅ naujas kintamasis
 let selectedDay = null;
 
-// avg helper
 function avg(arr){
   return arr.reduce((a,b)=>a+b,0)/arr.length;
 }
 
 // ✅ DATE INIT
 document.addEventListener("DOMContentLoaded", () => {
+
   const picker = document.getElementById("dayPicker");
 
   const today = new Date();
-  const iso = today.toISOString().split("T")[0];
+  const iso =
+    today.getFullYear() + "-" +
+    String(today.getMonth()+1).padStart(2,'0') + "-" +
+    String(today.getDate()).padStart(2,'0');
 
   picker.value = iso;
   selectedDay = iso;
@@ -164,28 +154,54 @@ let { data, error } = await db
 .select("*")
 .eq("id", ESP_ID)
 .order("timestamp", { ascending:false })
-.limit(200); // ✅ padidinta kad turėtum daugiau dienų
+.limit(500);
 
 if(error){
   console.log(error);
   return;
 }
 
-// ✅ FILTRAS PAGAL DIENĄ
+// ✅ VISADA NAUJAUSIAS STATUS (FIX glitch)
+let newest = data[0];
+
+// ===== STATUS =====
+if(newest){
+  const diff = (Date.now() - new Date(newest.timestamp).getTime()) / 1000;
+
+  let statusEl = document.getElementById("status");
+
+  if(diff < 1800){
+    statusEl.textContent="🟢 ONLINE";
+    statusEl.className="value green";
+  }else if(diff < 7200){
+    statusEl.textContent="🟡 DELAY";
+    statusEl.className="value yellow";
+  }else{
+    statusEl.textContent="🔴 OFFLINE";
+    statusEl.className="value red";
+  }
+}
+
+// ✅ FILTRAS PAGAL LOCAL DAY
 if(selectedDay){
   data = data.filter(x => {
     const d = new Date(x.timestamp);
-    const dateStr = d.toISOString().split("T")[0];
+
+    const dateStr =
+      d.getFullYear() + "-" +
+      String(d.getMonth()+1).padStart(2,'0') + "-" +
+      String(d.getDate()).padStart(2,'0');
+
     return dateStr === selectedDay;
   });
 }
 
 if(!data || data.length === 0){
-  document.getElementById("status").textContent="❌ Nėra duomenų";
+  document.getElementById("forecast").textContent="❌ Nėra duomenų";
   return;
 }
 
-// ✅ FIX blogi duomenys
+// ✅ clean
 data = data.filter(x =>
   x &&
   x.timestamp &&
@@ -194,43 +210,22 @@ data = data.filter(x =>
   !isNaN(parseFloat(x.pressure))
 );
 
-if(data.length === 0){
-  document.getElementById("status").textContent="❌ Blogi duomenys";
-  return;
-}
-
 data.reverse();
 
 let temp = data.map(x => parseFloat(x.temp));
 let moist = data.map(x => parseFloat(x.moisture));
 let press = data.map(x => parseFloat(x.pressure));
 
+// ✅ labels LOCAL
 let labels = data.map(x => {
   const d = new Date(x.timestamp);
-  return isNaN(d) ? "" :
-    d.toLocaleTimeString([], {
-      hour:"2-digit",
-      minute:"2-digit"
-    });
+  return d.toLocaleTimeString([], {
+    hour:"2-digit",
+    minute:"2-digit"
+  });
 });
 
 let last = data[data.length-1];
-
-// ===== STATUS =====
-const diff = (Date.now() - new Date(last.timestamp).getTime()) / 1000;
-
-let statusEl = document.getElementById("status");
-
-if(diff < 1800){
-  statusEl.textContent="🟢 ONLINE";
-  statusEl.className="value green";
-}else if(diff < 7200){
-  statusEl.textContent="🟡 DELAY";
-  statusEl.className="value yellow";
-}else{
-  statusEl.textContent="🔴 OFFLINE";
-  statusEl.className="value red";
-}
 
 // ===== AI =====
 let prediction="🌫 Stabilu";
@@ -265,7 +260,7 @@ if(data.length>=5){
 document.getElementById("forecast").textContent =
 `${prediction} | 🌧 ${rain}% | 🌬 ${Math.round(wind)} m/s`;
 
-// ===== ALERTai =====
+// ===== ALERTAI =====
 let alerts = [];
 
 if(rain > 70) alerts.push("🌧 Lietus");
@@ -305,49 +300,25 @@ else{
   sEl.className="value green";
 }
 
-// ===== DESTROY =====
+// ===== CHART RESET =====
 if(c1) c1.destroy();
 if(c2) c2.destroy();
 if(c3) c3.destroy();
 
 // ===== GRAFIKAI =====
-c1 = new Chart(document.getElementById("chartTemp"), {
+c1 = new Chart(chartTemp, {
  type:'line',
- data:{
-  labels,
-  datasets:[{
-    label:"°C",
-    data:temp,
-    borderColor:"#ef4444",
-    tension:0.3
-  }]
- }
+ data:{ labels, datasets:[{ data:temp, borderColor:"#ef4444" }] }
 });
 
-c2 = new Chart(document.getElementById("chartMoist"), {
+c2 = new Chart(chartMoist, {
  type:'line',
- data:{
-  labels,
-  datasets:[{
-    label:"%",
-    data:moist,
-    borderColor:"#3b82f6",
-    tension:0.3
-  }]
- }
+ data:{ labels, datasets:[{ data:moist, borderColor:"#3b82f6" }] }
 });
 
-c3 = new Chart(document.getElementById("chartPress"), {
+c3 = new Chart(chartPress, {
  type:'line',
- data:{
-  labels,
-  datasets:[{
-    label:"hPa",
-    data:press,
-    borderColor:"#22c55e",
-    tension:0.3
-  }]
- }
+ data:{ labels, datasets:[{ data:press, borderColor:"#22c55e" }] }
 });
 
 } catch(e){
