@@ -1,373 +1,111 @@
 <!DOCTYPE html>
 <html lang="lt">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>AI Dashboard PRO</title>
-
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-
-/* ===== PREMIUM UI ===== */
-:root{
-  --glass:rgba(255,255,255,0.08);
-  --border:rgba(255,255,255,0.15);
-  --text:#e5e7eb;
-}
-
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  color:var(--text);
-
-  background:
-    radial-gradient(circle at 10% 20%, #0ea5e9 0%, transparent 40%),
-    radial-gradient(circle at 80% 70%, #22c55e 0%, transparent 35%),
-    linear-gradient(140deg,#020617,#0f172a,#020617);
-}
-
-/* LAYOUT */
-.container{
-  max-width:1150px;
-  margin:auto;
-  padding:28px;
-}
-
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:18px;
-}
-
-/* GLASS CARD */
-.card{
-  position:relative;
-  background:var(--glass);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-
-  border-radius:20px;
-  padding:18px;
-  border:1px solid var(--border);
-
-  box-shadow:
-    0 12px 35px rgba(0,0,0,0.4),
-    inset 0 1px 0 rgba(255,255,255,0.15);
-
-  transition:.3s;
-}
-
-.card:hover{
-  transform:translateY(-4px);
-  box-shadow:
-    0 20px 45px rgba(0,0,0,0.5);
-}
-
-/* shine */
-.card::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:20px;
-  background:linear-gradient(120deg,transparent,rgba(255,255,255,0.15),transparent);
-  opacity:0;
-  transition:.3s;
-}
-
-.card:hover::before{
-  opacity:1;
-}
-
-/* TEXT */
-.title{
-  font-size:11px;
-  letter-spacing:.12em;
-  text-transform:uppercase;
-  color:rgba(255,255,255,0.55);
-}
-
-.value{
-  font-size:22px;
-  font-weight:600;
-  margin-top:6px;
-}
-
-/* COLORS */
-.green{color:#4ade80;}
-.red{color:#f87171;}
-.yellow{color:#fde047;}
-
-/* BUTTONS */
-.controls{
-  display:flex;
-  gap:10px;
-  margin-top:12px;
-}
-
-button{
-  padding:8px 14px;
-  border-radius:12px;
-  border:1px solid var(--border);
-  background:rgba(255,255,255,0.05);
-  color:white;
-  cursor:pointer;
-  transition:.2s;
-}
-
-button:hover{
-  background:rgba(255,255,255,0.12);
-}
-
-.active{
-  background:linear-gradient(135deg,#22c55e,#15803d);
-  color:#022c22;
-  border:none;
-}
-
-/* DATE */
-input[type="date"]{
-  margin-top:10px;
-  padding:8px;
-  border-radius:10px;
-  border:1px solid var(--border);
-  background:rgba(255,255,255,0.05);
-  color:white;
-}
-
-canvas{margin-top:12px;}
-
-/* EXPLAIN */
-.explain{
-  margin-top:30px;
-}
-
-.explain-box{
-  background:var(--glass);
-  backdrop-filter:blur(16px);
-  border-radius:20px;
-  padding:22px;
-  border:1px solid var(--border);
-}
-
-.explain-item{
-  margin-bottom:16px;
-  line-height:1.5;
-}
-
-.explain-item b{
-  display:block;
-  margin-bottom:6px;
-}
-
-</style>
+  <meta charset="UTF-8">
+  <title>3D spausdinimo kainos skaičiuoklė</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
+    label { display: block; margin-top: 10px; }
+    input { width: 100%; padding: 6px; margin-top: 4px; box-sizing: border-box; }
+    button { margin-top: 15px; padding: 8px 12px; }
+    .result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+    .result p { margin: 4px 0; }
+  </style>
 </head>
-
 <body>
+  <h1>3D spausdinimo kainos skaičiuoklė</h1>
 
-<div class="container">
+  <!-- ĮVESTYS -->
+  <label>
+    Filamento kaina už 1 kg (€):
+    <input type="number" id="filamentPricePerKg" value="20" step="0.01">
+  </label>
 
-<div class="grid">
+  <label>
+    Modelio svoris (g):
+    <input type="number" id="modelWeightGrams" value="50" step="0.01">
+  </label>
 
-<div class="card">
-<div class="title">📡 STATUS</div>
-<div id="status" class="value">–</div>
-</div>
+  <label>
+    Spausdinimo laikas (valandomis):
+    <input type="number" id="printTimeHours" value="3" step="0.1">
+  </label>
 
-<div class="card">
-<div class="title">🌦 PROGNOZĖ</div>
-<div id="forecast" class="value">–</div>
-</div>
+  <label>
+    Spausdintuvo galia (W):
+    <input type="number" id="printerPowerW" value="150" step="1">
+  </label>
 
-<div class="card">
-<div class="title">⚠️ ALERTAI</div>
-<div id="alerts" class="value">–</div>
-</div>
+  <label>
+    Elektros kaina už 1 kWh (€):
+    <input type="number" id="electricityPricePerKWh" value="0.25" step="0.01">
+  </label>
 
-<div class="card">
-<div class="title">🌱 LAISTYMAS</div>
-<div id="watering" class="value">–</div>
-</div>
+  <label>
+    Darbo valandos kaina (€ / val.):
+    <input type="number" id="laborRatePerHour" value="5" step="0.01">
+  </label>
 
-<div class="card">
-<div class="title">🔥 STRESS</div>
-<div id="stress" class="value">–</div>
-</div>
+  <label>
+    Pelno marža (%):
+    <input type="number" id="profitMarginPercent" value="30" step="1">
+  </label>
 
-</div>
+  <button onclick="calculateCost()">Skaičiuoti kainą</button>
 
-<div class="card">
-<div class="title">📊 Laikotarpis</div>
+  <!-- REZULTATAS -->
+  <div class="result" id="resultBox" style="display:none;">
+    <h2>Rezultatas</h2>
+    <p id="filamentCost"></p>
+    <p id="electricityCost"></p>
+    <p id="laborCost"></p>
+    <hr>
+    <p id="totalCost"></p>
+    <p id="finalPrice"></p>
+  </div>
 
-<div class="controls">
-<button id="btnDay" class="active">📅 Diena</button>
-<button id="btnAll">📊 Visi</button>
-</div>
+  <script>
+    function calculateCost() {
+      // Paimam reikšmes
+      const filamentPricePerKg = parseFloat(document.getElementById('filamentPricePerKg').value) || 0;
+      const modelWeightGrams = parseFloat(document.getElementById('modelWeightGrams').value) || 0;
+      const printTimeHours = parseFloat(document.getElementById('printTimeHours').value) || 0;
+      const printerPowerW = parseFloat(document.getElementById('printerPowerW').value) || 0;
+      const electricityPricePerKWh = parseFloat(document.getElementById('electricityPricePerKWh').value) || 0;
+      const laborRatePerHour = parseFloat(document.getElementById('laborRatePerHour').value) || 0;
+      const profitMarginPercent = parseFloat(document.getElementById('profitMarginPercent').value) || 0;
 
-<input type="date" id="dayPicker">
-</div>
+      // Filamento kaina
+      const filamentCost = (modelWeightGrams / 1000) * filamentPricePerKg;
 
-<div class="card">
-<div class="title">🌡 Temperatūra</div>
-<canvas id="chartTemp"></canvas>
-</div>
+      // Elektros kaina
+      const kWhUsed = (printerPowerW * printTimeHours) / 1000;
+      const electricityCost = kWhUsed * electricityPricePerKWh;
 
-<div class="card">
-<div class="title">💧 Drėgmė</div>
-<canvas id="chartMoist"></canvas>
-</div>
+      // Darbo kaina (jei nori skaičiuoti savo laiką)
+      const laborCost = printTimeHours * laborRatePerHour;
 
-<div class="card">
-<div class="title">📈 Slėgis</div>
-<canvas id="chartPress"></canvas>
-</div>
+      // Savikaina
+      const totalCost = filamentCost + electricityCost + laborCost;
 
-<div class="explain">
-<div class="explain-box">
+      // Galutinė kaina su marža
+      const finalPrice = totalCost * (1 + profitMarginPercent / 100);
 
-<div class="explain-item">
-<b>📡 STATUS</b>
-Rodo sistemos ryšį pagal paskutinį signalą.
-</div>
+      // Atvaizdavimas
+      document.getElementById('filamentCost').textContent =
+        'Filamento kaina: ' + filamentCost.toFixed(2) + ' €';
+      document.getElementById('electricityCost').textContent =
+        'Elektros kaina: ' + electricityCost.toFixed(2) + ' €';
+      document.getElementById('laborCost').textContent =
+        'Darbo kaina: ' + laborCost.toFixed(2) + ' €';
 
-<div class="explain-item">
-<b>🌦 PROGNOZĖ</b>
-Skaičiuojama pagal slėgį ir drėgmę.
-</div>
+      document.getElementById('totalCost').textContent =
+        'Bendra savikaina: ' + totalCost.toFixed(2) + ' €';
+      document.getElementById('finalPrice').textContent =
+        'Siūloma pardavimo kaina (su marža): ' + finalPrice.toFixed(2) + ' €';
 
-<div class="explain-item">
-<b>⚠️ ALERTAI</b>
-Įspėjimai: sausra, lietus, karštis.
-</div>
-
-<div class="explain-item">
-<b>🌱 LAISTYMAS</b>
-Sprendimas ar reikia laistyti.
-</div>
-
-<div class="explain-item">
-<b>🔥 STRESS</b>
-Augalo streso lygis.
-</div>
-
-</div>
-</div>
-
-</div>
-
-<script>
-
-/* ✅ TAVO ORIGINALUS JS (NEKEISTAS) */
-
-const db = supabase.createClient(
-"https://wbueugwhngtgtifuasvm.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndidWV1Z3dobmd0Z3RpZnVhc3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzY1ODYsImV4cCI6MjA5NjI1MjU4Nn0.sOcV5GRsoIhhApmHhFnSCZ6NmDPcnkGrE6mSyQchSmI"
-);
-
-const ESP_ID = "esp1";
-
-let c1, c2, c3;
-let selectedDay = null;
-let mode = "day";
-
-function avg(arr){
-  return arr.reduce((a,b)=>a+b,0)/arr.length;
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-
-  const picker = document.getElementById("dayPicker");
-
-  const now = new Date();
-  const today =
-    now.getFullYear() + "-" +
-    String(now.getMonth()+1).padStart(2,'0') + "-" +
-    String(now.getDate()).padStart(2,'0');
-
-  picker.value = today;
-  selectedDay = today;
-
-  picker.addEventListener("change", () => {
-    selectedDay = picker.value;
-    load();
-  });
-
-  btnDay.onclick = () => {
-    mode="day";
-    btnDay.classList.add("active");
-    btnAll.classList.remove("active");
-    load();
-  };
-
-  btnAll.onclick = () => {
-    mode="all";
-    btnAll.classList.add("active");
-    btnDay.classList.remove("active");
-    load();
-  };
-
-});
-
-async function load(){
-  try{
-    let { data } = await db
-    .from("status_log")
-    .select("*")
-    .eq("id", ESP_ID)
-    .order("timestamp",{ascending:false})
-    .limit(1000);
-
-    let newest = data[0];
-    let diff = (Date.now()-new Date(newest.timestamp))/1000;
-
-    let statusEl = document.getElementById("status");
-
-    if(diff<3600){
-      statusEl.textContent="🟢 ONLINE";
-      statusEl.className="value green";
-    }else if(diff<10800){
-      statusEl.textContent="🟡 DELAY";
-      statusEl.className="value yellow";
-    }else{
-      statusEl.textContent="🔴 OFFLINE";
-      statusEl.className="value red";
+      document.getElementById('resultBox').style.display = 'block';
     }
-
-    if(mode==="day"){
-      let start = new Date(selectedDay+"T00:00:00");
-      let end = new Date(selectedDay+"T23:59:59");
-      let f = data.filter(x=>new Date(x.timestamp)>=start && new Date(x.timestamp)<=end);
-      if(f.length>0) data=f;
-    }
-
-    data = data.filter(x=>x && x.temp!=null && x.moisture!=null && x.pressure!=null);
-    data.reverse();
-
-    let temp = data.map(x=>+x.temp);
-    let moist = data.map(x=>+x.moisture);
-    let press = data.map(x=>+x.pressure);
-
-    let labels = data.map(x=>new Date(x.timestamp).toLocaleTimeString([],{
-      hour:"2-digit",minute:"2-digit"
-    }));
-
-    if(c1) c1.destroy();
-    if(c2) c2.destroy();
-    if(c3) c3.destroy();
-
-    c1 = new Chart(chartTemp,{type:'line',data:{labels,datasets:[{data:temp,borderColor:"#ef4444"}]}});
-    c2 = new Chart(chartMoist,{type:'line',data:{labels,datasets:[{data:moist,borderColor:"#3b82f6"}]}});
-    c3 = new Chart(chartPress,{type:'line',data:{labels,datasets:[{data:press,borderColor:"#22c55e"}]}});
-
-  }catch(e){console.log(e);}
-}
-
-load();
-setInterval(load,60000);
-
-</script>
-
+  </script>
 </body>
 </html>
